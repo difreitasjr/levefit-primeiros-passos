@@ -147,23 +147,25 @@ export default function Dashboard() {
         </DashCard>
 
         {/* Check-in */}
-        <DashCard title="Como você está hoje?" icon={Sparkles} delay={320}>
-          <div className="flex justify-between">
-            {checkInRapido.opcoes.map((o) => (
-              <button
-                key={o.label}
-                onClick={() => setSelectedMood(o.label)}
-                className={cn(
-                  "flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-all active:scale-95",
-                  selectedMood === o.label ? "bg-primary/10" : "hover:bg-secondary"
-                )}
-              >
-                <span className="text-xl">{o.emoji}</span>
-                <span className="text-[10px] text-muted-foreground font-medium">{o.label}</span>
-              </button>
-            ))}
-          </div>
-        </DashCard>
+        <button onClick={() => navigate("/checkin")} className="w-full text-left">
+          <DashCard title="Como você está hoje?" icon={Sparkles} delay={320}>
+            <div className="flex justify-between">
+              {checkInRapido.opcoes.map((o) => (
+                <div
+                  key={o.label}
+                  className={cn(
+                    "flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-all",
+                    selectedMood === o.label ? "bg-primary/10" : ""
+                  )}
+                >
+                  <span className="text-xl">{o.emoji}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">{o.label}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-primary font-medium mt-2">Fazer check-in completo →</p>
+          </DashCard>
+        </button>
 
         {/* Progresso semanal */}
         <DashCard title="Progresso da semana" icon={Flame} delay={360}>
