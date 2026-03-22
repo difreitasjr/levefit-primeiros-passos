@@ -27,6 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const frase = fraseDoDia[Math.floor(Date.now() / 86400000) % fraseDoDia.length];
 
