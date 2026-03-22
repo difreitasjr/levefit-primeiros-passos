@@ -195,6 +195,7 @@ export default function Dashboard() {
           {atalhos.map((a) => (
             <button
               key={a.label}
+              onClick={() => navigate(a.path)}
               className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-card card-elevated transition-all active:scale-95"
             >
               <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", a.color)}>
