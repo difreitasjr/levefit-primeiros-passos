@@ -45,9 +45,17 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="px-5 pt-6 pb-4 space-y-4">
-        <div className="animate-fade-up">
-          <p className="text-sm text-muted-foreground font-medium">{saudacao},</p>
-          <h1 className="text-2xl font-semibold text-foreground">{mockUser.nome} 💛</h1>
+        <div className="flex items-center justify-between animate-fade-up">
+          <div>
+            <p className="text-sm text-muted-foreground font-medium">{saudacao},</p>
+            <h1 className="text-2xl font-semibold text-foreground">{mockUser.nome} 💛</h1>
+          </div>
+          <button
+            onClick={() => navigate("/perfil")}
+            className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/15 transition-colors active:scale-95"
+          >
+            <span className="text-sm font-semibold">{mockUser.nome.charAt(0)}</span>
+          </button>
         </div>
         <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up" style={{ animationDelay: "80ms" }}>
           <p className="text-sm text-foreground leading-relaxed italic font-display">
