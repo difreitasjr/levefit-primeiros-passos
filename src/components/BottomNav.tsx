@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: Home, label: "Hoje", path: "/dashboard" },
-  { icon: Utensils, label: "Alimentação", path: "/dashboard" },
-  { icon: Dumbbell, label: "Treino", path: "/dashboard" },
-  { icon: TrendingUp, label: "Progresso", path: "/dashboard" },
-  { icon: Sparkles, label: "Desafios", path: "/dashboard" },
+  { icon: Utensils, label: "Alimentação", path: "/alimentacao" },
+  { icon: Dumbbell, label: "Treino", path: "/treino" },
+  { icon: TrendingUp, label: "Progresso", path: "/progresso" },
+  { icon: Sparkles, label: "Desafios", path: "/desafios" },
 ];
 
 interface BottomNavProps {
