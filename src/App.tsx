@@ -7,6 +7,12 @@ import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
+import Alimentacao from "./pages/Alimentacao";
+import Treino from "./pages/Treino";
+import CheckIn from "./pages/CheckIn";
+import Progresso from "./pages/Progresso";
+import Desafios from "./pages/Desafios";
+import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +28,12 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/alimentacao" element={<Alimentacao />} />
+          <Route path="/treino" element={<Treino />} />
+          <Route path="/checkin" element={<CheckIn />} />
+          <Route path="/progresso" element={<Progresso />} />
+          <Route path="/desafios" element={<Desafios />} />
+          <Route path="/perfil" element={<Perfil />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

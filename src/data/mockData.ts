@@ -17,6 +17,11 @@ export const mockUser = {
   consumoAgua: "1.5L",
   mediaSono: "6h",
   maiorDificuldade: "Manter constância",
+  email: "carolina@email.com",
+  lembreteTreino: true,
+  lembreteAgua: true,
+  lembreteRefeicao: true,
+  lembreteSono: true,
 };
 
 export const fraseDoDia = [
@@ -38,36 +43,94 @@ export const refeicoesDoDia = [
     horario: "07:30",
     descricao: "Omelete de claras com espinafre + 1 fatia de pão integral + café com leite de amêndoas",
     calorias: 320,
+    proteina: 22,
+    carbs: 28,
+    gordura: 12,
     feito: true,
+    substituicoes: [
+      "Tapioca com ovo mexido e tomate",
+      "Mingau de aveia com banana e canela",
+      "Panqueca de banana com pasta de amendoim",
+    ],
+    observacao: "Ótima forma de começar o dia com proteína e energia estável.",
+    favorita: false,
   },
   {
     tipo: "Lanche da manhã",
     horario: "10:00",
     descricao: "1 maçã + 10 castanhas de caju",
     calorias: 180,
+    proteina: 4,
+    carbs: 22,
+    gordura: 9,
     feito: true,
+    substituicoes: [
+      "1 banana + 5 nozes",
+      "Mix de frutas secas (30g)",
+      "1 pera + amêndoas",
+    ],
+    observacao: "Lanches com gordura boa ajudam a manter a saciedade até o almoço.",
+    favorita: true,
   },
   {
     tipo: "Almoço",
     horario: "12:30",
     descricao: "Frango grelhado + arroz integral + brócolis refogado + salada verde",
     calorias: 480,
+    proteina: 38,
+    carbs: 45,
+    gordura: 14,
     feito: false,
+    substituicoes: [
+      "Peixe assado com quinoa e legumes",
+      "Carne moída com purê de batata doce",
+      "Omelete recheada com legumes e arroz",
+    ],
+    observacao: "Prato colorido = mais nutrientes. Capriche nas cores!",
+    favorita: false,
   },
   {
     tipo: "Lanche da tarde",
     horario: "15:30",
     descricao: "Iogurte natural sem lactose + granola + banana",
     calorias: 210,
+    proteina: 8,
+    carbs: 32,
+    gordura: 6,
     feito: false,
+    substituicoes: [
+      "Vitamina de abacate com cacau",
+      "Torrada integral com pasta de amendoim",
+      "Bowl de açaí pequeno sem xarope",
+    ],
+    observacao: "Se preferir algo mais leve, uma fruta com castanhas resolve.",
+    favorita: false,
   },
   {
     tipo: "Jantar",
     horario: "19:00",
     descricao: "Sopa de legumes com frango desfiado + torrada integral",
     calorias: 350,
+    proteina: 26,
+    carbs: 30,
+    gordura: 10,
     feito: false,
+    substituicoes: [
+      "Salada completa com ovo cozido e grão de bico",
+      "Wrap integral com frango e salada",
+      "Omelete com legumes e aveia",
+    ],
+    observacao: "Jantares leves facilitam o sono. Evite comer muito perto de dormir.",
+    favorita: false,
   },
+];
+
+export const dicasAlimentacao = [
+  "Mastigar devagar ajuda na saciedade e na digestão. Tente comer sem telas!",
+  "Não pule refeições — isso pode causar compulsão depois.",
+  "Beber água antes das refeições ajuda a comer na medida certa.",
+  "Alimentos integrais sustentam a energia por mais tempo.",
+  "Permita-se comer o que gosta com equilíbrio. Proibir não funciona.",
 ];
 
 export const aguaDoDia = {
@@ -85,18 +148,41 @@ export const sonoDoDia = {
   horaAcordar: "06:00",
 };
 
-export const treinoDoDia = {
+export const treinoCompleto = {
   tipo: "Treino de força — Membros inferiores",
   duracao: "40 min",
   nivel: "Moderado",
-  exercicios: [
-    { nome: "Agachamento livre", series: "3x15", feito: false },
-    { nome: "Afundo alternado", series: "3x12", feito: false },
-    { nome: "Elevação pélvica", series: "3x15", feito: false },
-    { nome: "Panturrilha em pé", series: "3x20", feito: false },
-    { nome: "Abdominais", series: "3x15", feito: false },
-  ],
   feito: false,
+  aquecimento: [
+    { nome: "Polichinelos", duracao: "1 min", feito: false },
+    { nome: "Agachamento sem peso", duracao: "1 min", feito: false },
+    { nome: "Elevação de joelhos", duracao: "1 min", feito: false },
+  ],
+  principal: [
+    { nome: "Agachamento livre", series: "3x15", descanso: "45s", feito: false },
+    { nome: "Afundo alternado", series: "3x12", descanso: "45s", feito: false },
+    { nome: "Elevação pélvica", series: "3x15", descanso: "45s", feito: false },
+    { nome: "Panturrilha em pé", series: "3x20", descanso: "30s", feito: false },
+    { nome: "Abdominais infra", series: "3x15", descanso: "30s", feito: false },
+  ],
+  finalizacao: [
+    { nome: "Alongamento posterior", duracao: "1 min", feito: false },
+    { nome: "Alongamento quadríceps", duracao: "1 min", feito: false },
+    { nome: "Respiração profunda", duracao: "1 min", feito: false },
+  ],
+  alternativa: {
+    tipo: "Caminhada leve",
+    duracao: "30 min",
+    descricao: "Se hoje não rolar treino, uma caminhada ao ar livre já conta como movimento. Coloque uma música e vá!",
+  },
+};
+
+export const treinoDoDia = {
+  tipo: treinoCompleto.tipo,
+  duracao: treinoCompleto.duracao,
+  nivel: treinoCompleto.nivel,
+  exercicios: treinoCompleto.principal,
+  feito: treinoCompleto.feito,
 };
 
 export const progressoSemanal = {
@@ -121,6 +207,200 @@ export const checkInRapido = {
     { emoji: "😴", label: "Cansada" },
     { emoji: "💪", label: "Motivada" },
     { emoji: "😔", label: "Desanimada" },
+  ],
+};
+
+export const checkInCompleto = {
+  campos: [
+    {
+      id: "humor",
+      label: "Como está seu humor?",
+      tipo: "emoji" as const,
+      opcoes: [
+        { emoji: "😊", label: "Bem" },
+        { emoji: "😐", label: "Normal" },
+        { emoji: "😴", label: "Cansada" },
+        { emoji: "💪", label: "Motivada" },
+        { emoji: "😔", label: "Desanimada" },
+      ],
+    },
+    {
+      id: "energia",
+      label: "Nível de energia",
+      tipo: "slider" as const,
+      min: 1,
+      max: 5,
+      labels: ["Muito baixa", "Baixa", "Normal", "Boa", "Ótima"],
+    },
+    {
+      id: "alimentacao",
+      label: "Como foi sua alimentação hoje?",
+      tipo: "emoji" as const,
+      opcoes: [
+        { emoji: "🥗", label: "Ótima" },
+        { emoji: "👍", label: "Boa" },
+        { emoji: "😐", label: "Mais ou menos" },
+        { emoji: "🍫", label: "Fugiu do plano" },
+      ],
+    },
+    {
+      id: "agua",
+      label: "Bebeu água suficiente?",
+      tipo: "emoji" as const,
+      opcoes: [
+        { emoji: "💧", label: "Sim!" },
+        { emoji: "😅", label: "Quase" },
+        { emoji: "😬", label: "Pouco" },
+      ],
+    },
+    {
+      id: "treino",
+      label: "Treinou ou se movimentou?",
+      tipo: "emoji" as const,
+      opcoes: [
+        { emoji: "🏋️‍♀️", label: "Treinei!" },
+        { emoji: "🚶‍♀️", label: "Caminhei" },
+        { emoji: "🧘‍♀️", label: "Alonguei" },
+        { emoji: "🛋️", label: "Descansei" },
+      ],
+    },
+    {
+      id: "sono",
+      label: "Dormiu bem ontem?",
+      tipo: "emoji" as const,
+      opcoes: [
+        { emoji: "😴", label: "Muito bem" },
+        { emoji: "🙂", label: "Razoável" },
+        { emoji: "😫", label: "Mal dormi" },
+      ],
+    },
+    {
+      id: "nota",
+      label: "Quer anotar algo sobre seu dia?",
+      tipo: "text" as const,
+      placeholder: "Opcional — escreva como quiser...",
+    },
+  ],
+  feedbacks: [
+    {
+      titulo: "Dia incrível! 🌟",
+      mensagem: "Você está no caminho certo. Cada dia de constância é uma vitória.",
+      recomendacao: "Que tal encerrar o dia com uma meditação curta de 5 minutos?",
+    },
+    {
+      titulo: "Bom progresso! 💛",
+      mensagem: "Nem todo dia será perfeito, e tudo bem. O importante é continuar.",
+      recomendacao: "Tente dormir um pouco mais cedo hoje — seu corpo agradece.",
+    },
+    {
+      titulo: "Tudo bem descansar 🌿",
+      mensagem: "Dias difíceis fazem parte. Amanhã é um novo começo.",
+      recomendacao: "Um banho quente e uma xícara de chá podem fazer maravilhas.",
+    },
+  ],
+};
+
+export const progressoDetalhado = {
+  pesoHistorico: [
+    { semana: "Sem 1", peso: 78.2 },
+    { semana: "Sem 2", peso: 77.5 },
+    { semana: "Sem 3", peso: 77.1 },
+    { semana: "Sem 4", peso: 76.4 },
+    { semana: "Sem 5", peso: 75.8 },
+    { semana: "Sem 6", peso: 75.2 },
+    { semana: "Sem 7", peso: 74.6 },
+    { semana: "Sem 8", peso: 73.9 },
+    { semana: "Sem 9", peso: 73.3 },
+    { semana: "Sem 10", peso: 72.8 },
+    { semana: "Sem 11", peso: 72.4 },
+  ],
+  medidas: {
+    cintura: { atual: 78, inicial: 84 },
+    quadril: { atual: 101, inicial: 105 },
+    braco: { atual: 29, inicial: 31 },
+    coxa: { atual: 56, inicial: 59 },
+  },
+  semanaAtual: {
+    diasCheckIn: 5,
+    totalDias: 7,
+    aguaMedia: 1.8,
+    aguaMeta: 2.5,
+    sonoMedio: 6.5,
+    sonoMeta: 8,
+    treinosConcluidos: 2,
+    treinosMeta: 3,
+  },
+  conquistas: [
+    { titulo: "7 dias seguidos", descricao: "Completou uma semana inteira de check-in", icone: "🔥", conquistado: true },
+    { titulo: "Hidratação em dia", descricao: "Bateu a meta de água 5 dias na semana", icone: "💧", conquistado: true },
+    { titulo: "Primeira semana", descricao: "Completou sua primeira semana no LeveFit", icone: "⭐", conquistado: true },
+    { titulo: "Constância de ferro", descricao: "14 dias seguidos de check-in", icone: "💪", conquistado: false },
+    { titulo: "Sono reparador", descricao: "Dormiu 8h por 5 dias seguidos", icone: "🌙", conquistado: false },
+  ],
+  vitoriasNaoBalanca: [
+    "Subiu escadas sem cansar",
+    "Roupas mais confortáveis",
+    "Mais disposição pela manhã",
+    "Pele mais bonita e hidratada",
+    "Menos inchaço ao longo do dia",
+  ],
+};
+
+export const desafios = {
+  desafioSemanal: {
+    titulo: "Semana da Hidratação",
+    descricao: "Beba pelo menos 2L de água por dia durante 7 dias seguidos",
+    progresso: 4,
+    total: 7,
+    recompensa: "Medalha 💧 Rainha da Hidratação",
+    ativo: true,
+  },
+  missoesConstancia: [
+    {
+      titulo: "Check-in todo dia",
+      descricao: "Faça seu check-in diário por 7 dias",
+      progresso: 5,
+      total: 7,
+      icone: "📝",
+      completa: false,
+    },
+    {
+      titulo: "3 treinos na semana",
+      descricao: "Complete 3 treinos esta semana",
+      progresso: 2,
+      total: 3,
+      icone: "🏋️‍♀️",
+      completa: false,
+    },
+    {
+      titulo: "Sem pular refeição",
+      descricao: "Registre todas as refeições por 5 dias",
+      progresso: 5,
+      total: 5,
+      icone: "🥗",
+      completa: true,
+    },
+    {
+      titulo: "Dorminhoca disciplinada",
+      descricao: "Durma antes das 23h por 5 dias",
+      progresso: 3,
+      total: 5,
+      icone: "😴",
+      completa: false,
+    },
+  ],
+  streak: {
+    atual: 12,
+    melhor: 18,
+    emoji: "🔥",
+  },
+  medalhas: [
+    { nome: "Primeira semana", icone: "⭐", descricao: "Completou 7 dias", conquistada: true, data: "10 Mar" },
+    { nome: "Hidratada", icone: "💧", descricao: "5 dias batendo meta de água", conquistada: true, data: "14 Mar" },
+    { nome: "Foco total", icone: "🎯", descricao: "Completou todas as refeições 3 dias", conquistada: true, data: "17 Mar" },
+    { nome: "Sem desculpas", icone: "💪", descricao: "3 treinos em uma semana", conquistada: false, data: null },
+    { nome: "Dorminhoca top", icone: "🌙", descricao: "8h de sono por 5 dias", conquistada: false, data: null },
+    { nome: "Constância de ouro", icone: "👑", descricao: "21 dias seguidos de check-in", conquistada: false, data: null },
   ],
 };
 

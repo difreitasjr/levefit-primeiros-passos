@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import {
   mockUser,
@@ -26,6 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const frase = fraseDoDia[Math.floor(Date.now() / 86400000) % fraseDoDia.length];
 
@@ -33,19 +35,27 @@ export default function Dashboard() {
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
 
   const atalhos = [
-    { icon: Utensils, label: "Alimentação", color: "bg-primary/10 text-primary" },
-    { icon: Dumbbell, label: "Treino", color: "bg-accent/10 text-accent" },
-    { icon: TrendingUp, label: "Progresso", color: "bg-terracotta/10 text-terracotta" },
-    { icon: Sparkles, label: "Desafios", color: "bg-primary/10 text-primary" },
+    { icon: Utensils, label: "Alimentação", color: "bg-primary/10 text-primary", path: "/alimentacao" },
+    { icon: Dumbbell, label: "Treino", color: "bg-accent/10 text-accent", path: "/treino" },
+    { icon: TrendingUp, label: "Progresso", color: "bg-terracotta/10 text-terracotta", path: "/progresso" },
+    { icon: Sparkles, label: "Desafios", color: "bg-primary/10 text-primary", path: "/desafios" },
   ];
 
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="px-5 pt-6 pb-4 space-y-4">
-        <div className="animate-fade-up">
-          <p className="text-sm text-muted-foreground font-medium">{saudacao},</p>
-          <h1 className="text-2xl font-semibold text-foreground">{mockUser.nome} 💛</h1>
+        <div className="flex items-center justify-between animate-fade-up">
+          <div>
+            <p className="text-sm text-muted-foreground font-medium">{saudacao},</p>
+            <h1 className="text-2xl font-semibold text-foreground">{mockUser.nome} 💛</h1>
+          </div>
+          <button
+            onClick={() => navigate("/perfil")}
+            className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/15 transition-colors active:scale-95"
+          >
+            <span className="text-sm font-semibold">{mockUser.nome.charAt(0)}</span>
+          </button>
         </div>
         <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up" style={{ animationDelay: "80ms" }}>
           <p className="text-sm text-foreground leading-relaxed italic font-display">
@@ -137,23 +147,25 @@ export default function Dashboard() {
         </DashCard>
 
         {/* Check-in */}
-        <DashCard title="Como você está hoje?" icon={Sparkles} delay={320}>
-          <div className="flex justify-between">
-            {checkInRapido.opcoes.map((o) => (
-              <button
-                key={o.label}
-                onClick={() => setSelectedMood(o.label)}
-                className={cn(
-                  "flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-all active:scale-95",
-                  selectedMood === o.label ? "bg-primary/10" : "hover:bg-secondary"
-                )}
-              >
-                <span className="text-xl">{o.emoji}</span>
-                <span className="text-[10px] text-muted-foreground font-medium">{o.label}</span>
-              </button>
-            ))}
-          </div>
-        </DashCard>
+        <button onClick={() => navigate("/checkin")} className="w-full text-left">
+          <DashCard title="Como você está hoje?" icon={Sparkles} delay={320}>
+            <div className="flex justify-between">
+              {checkInRapido.opcoes.map((o) => (
+                <div
+                  key={o.label}
+                  className={cn(
+                    "flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-all",
+                    selectedMood === o.label ? "bg-primary/10" : ""
+                  )}
+                >
+                  <span className="text-xl">{o.emoji}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">{o.label}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-primary font-medium mt-2">Fazer check-in completo →</p>
+          </DashCard>
+        </button>
 
         {/* Progresso semanal */}
         <DashCard title="Progresso da semana" icon={Flame} delay={360}>
@@ -193,6 +205,7 @@ export default function Dashboard() {
           {atalhos.map((a) => (
             <button
               key={a.label}
+              onClick={() => navigate(a.path)}
               className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-card card-elevated transition-all active:scale-95"
             >
               <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", a.color)}>
