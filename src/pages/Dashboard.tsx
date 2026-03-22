@@ -35,10 +35,10 @@ export default function Dashboard() {
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
 
   const atalhos = [
-    { icon: Utensils, label: "Alimentação", color: "bg-primary/10 text-primary" },
-    { icon: Dumbbell, label: "Treino", color: "bg-accent/10 text-accent" },
-    { icon: TrendingUp, label: "Progresso", color: "bg-terracotta/10 text-terracotta" },
-    { icon: Sparkles, label: "Desafios", color: "bg-primary/10 text-primary" },
+    { icon: Utensils, label: "Alimentação", color: "bg-primary/10 text-primary", path: "/alimentacao" },
+    { icon: Dumbbell, label: "Treino", color: "bg-accent/10 text-accent", path: "/treino" },
+    { icon: TrendingUp, label: "Progresso", color: "bg-terracotta/10 text-terracotta", path: "/progresso" },
+    { icon: Sparkles, label: "Desafios", color: "bg-primary/10 text-primary", path: "/desafios" },
   ];
 
   return (
