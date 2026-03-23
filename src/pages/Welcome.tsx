@@ -1,67 +1,100 @@
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Heart, Droplets, Moon, Dumbbell, Salad } from "lucide-react";
+import { useNavigate } from 'react-router-dom'
 
-export default function Welcome() {
-  const navigate = useNavigate();
-
-  const features = [
-    { icon: Salad, label: "Alimentação equilibrada" },
-    { icon: Dumbbell, label: "Treino possível" },
-    { icon: Droplets, label: "Hidratação" },
-    { icon: Moon, label: "Sono de qualidade" },
-    { icon: Heart, label: "Autocuidado" },
-  ];
+function Welcome() {
+  const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-background">
-      <div className="w-full max-w-sm flex flex-col items-center text-center space-y-8">
-        {/* Logo */}
-        <div className="animate-fade-up" style={{ animationDelay: "0ms" }}>
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 mx-auto">
-            <Heart className="text-primary" size={28} strokeWidth={1.8} />
-          </div>
-          <h1 className="text-3xl font-display font-semibold tracking-tight text-foreground">
-            LeveFit
-          </h1>
-        </div>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#f8f3ee',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 420,
+          background: '#ffffff',
+          borderRadius: 24,
+          padding: 28,
+          boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+          textAlign: 'center',
+        }}
+      >
+        <p
+          style={{
+            fontSize: 14,
+            color: '#9a7b6f',
+            marginBottom: 12,
+            fontWeight: 600,
+          }}
+        >
+          LeveFit
+        </p>
 
-        {/* Headline */}
-        <div className="space-y-3 animate-fade-up" style={{ animationDelay: "100ms" }}>
-          <h2 className="text-xl font-semibold text-foreground leading-snug">
-            Emagreça com rotina real,
-            <br />
-            <span className="text-primary">sem radicalismo</span>
-          </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-[280px] mx-auto">
-            Seu apoio diário em alimentação, treino, água, sono e constância. 
-            Sem dietas malucas, sem pressão.
-          </p>
-        </div>
+        <h1
+          style={{
+            fontSize: 28,
+            lineHeight: 1.2,
+            marginBottom: 12,
+            color: '#3f322d',
+          }}
+        >
+          Emagreça com rotina real, sem radicalismo
+        </h1>
 
-        {/* Feature pills */}
-        <div className="flex flex-wrap justify-center gap-2 animate-fade-up" style={{ animationDelay: "200ms" }}>
-          {features.map((f) => (
-            <span
-              key={f.label}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-xs font-medium"
-            >
-              <f.icon size={13} strokeWidth={1.8} />
-              {f.label}
-            </span>
-          ))}
-        </div>
+        <p
+          style={{
+            fontSize: 15,
+            color: '#6f5f58',
+            lineHeight: 1.6,
+            marginBottom: 24,
+          }}
+        >
+          Um app para te ajudar com alimentação, treino, água, sono e constância
+          de um jeito leve e possível.
+        </p>
 
-        {/* Actions */}
-        <div className="w-full space-y-3 animate-fade-up" style={{ animationDelay: "300ms" }}>
-          <Button variant="hero" className="w-full" onClick={() => navigate("/onboarding")}>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <button
+            onClick={() => navigate('/cadastro')}
+            style={{
+              border: 'none',
+              borderRadius: 16,
+              padding: 14,
+              fontSize: 16,
+              fontWeight: 600,
+              background: '#d6a692',
+              color: '#ffffff',
+              cursor: 'pointer',
+            }}
+          >
             Começar
-          </Button>
-          <Button variant="hero-outline" className="w-full" onClick={() => navigate("/login")}>
+          </button>
+
+          <button
+            onClick={() => navigate('/login')}
+            style={{
+              borderRadius: 16,
+              padding: 14,
+              fontSize: 16,
+              fontWeight: 600,
+              background: '#fff7f3',
+              color: '#7c6358',
+              border: '1px solid #e7d3ca',
+              cursor: 'pointer',
+            }}
+          >
             Já tenho conta
-          </Button>
+          </button>
         </div>
       </div>
     </div>
-  );
+  )
 }
+
+export default Welcome

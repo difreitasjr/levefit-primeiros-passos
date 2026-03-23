@@ -1,20 +1,18 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase/client'
 
-function Login() {
-  const navigate = useNavigate()
-
+function Cadastro() {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [mensagem, setMensagem] = useState('')
   const [carregando, setCarregando] = useState(false)
 
-  async function entrar() {
+  async function criarConta() {
     setCarregando(true)
     setMensagem('')
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signUp({
       email,
       password: senha,
     })
@@ -25,12 +23,8 @@ function Login() {
       return
     }
 
-    setMensagem('Login realizado com sucesso.')
+    setMensagem('Conta criada com sucesso. Verifique seu e-mail para confirmar.')
     setCarregando(false)
-
-    setTimeout(() => {
-      navigate('/app')
-    }, 800)
   }
 
   return (
@@ -59,11 +53,11 @@ function Login() {
         </p>
 
         <h1 style={{ fontSize: 28, marginBottom: 10, color: '#3f322d' }}>
-          Entrar
+          Criar conta
         </h1>
 
         <p style={{ color: '#6f5f58', marginBottom: 20 }}>
-          Acesse sua conta para continuar.
+          Comece seu cuidado diário com leveza.
         </p>
 
         <div style={{ display: 'grid', gap: 12 }}>
@@ -94,7 +88,7 @@ function Login() {
           />
 
           <button
-            onClick={entrar}
+            onClick={criarConta}
             disabled={carregando}
             style={{
               border: 'none',
@@ -107,7 +101,7 @@ function Login() {
               cursor: 'pointer',
             }}
           >
-            {carregando ? 'Entrando...' : 'Entrar'}
+            {carregando ? 'Criando conta...' : 'Criar conta'}
           </button>
         </div>
 
@@ -118,9 +112,9 @@ function Login() {
         )}
 
         <p style={{ marginTop: 20, color: '#6f5f58' }}>
-          Ainda não tem conta?{' '}
-          <Link to="/cadastro" style={{ color: '#a66f5a', fontWeight: 600 }}>
-            Criar conta
+          Já tem conta?{' '}
+          <Link to="/login" style={{ color: '#a66f5a', fontWeight: 600 }}>
+            Entrar
           </Link>
         </p>
 
@@ -134,4 +128,4 @@ function Login() {
   )
 }
 
-export default Login
+export default Cadastro
