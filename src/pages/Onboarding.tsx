@@ -1,16 +1,21 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ProgressBar";
 import { onboardingSteps } from "@/data/mockData";
 import { ChevronLeft, Check, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [showComplete, setShowComplete] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const current = onboardingSteps[step];
   const total = onboardingSteps.length;
@@ -19,7 +24,52 @@ export default function Onboarding() {
     if (step < total - 1) {
       setStep(step + 1);
     } else {
+      handleFinish();
+    }
+  };
+
+  const handleFinish = async () => {
+    if (!user) {
       setShowComplete(true);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Save onboarding answers
+      await supabase.from("onboarding_answers").insert({
+        user_id: user.id,
+        answers: answers,
+      });
+
+      // Update profile with onboarding data
+      await supabase.from("profiles").update({
+        nome: answers.nome || null,
+        idade: answers.idade ? parseInt(answers.idade) : null,
+        peso_atual: answers.peso ? parseFloat(answers.peso) : null,
+        peso_inicial: answers.peso ? parseFloat(answers.peso) : null,
+        altura: answers.altura ? parseInt(answers.altura) : null,
+        objetivo: answers.objetivo || null,
+        meta: answers.meta || null,
+        nivel_atividade: answers.nivelAtividade || null,
+        rotina: answers.rotina || null,
+        frequencia_treino: answers.frequenciaTreino || null,
+        horario_treino: answers.horarioTreino || null,
+        preferencias_alimentares: answers.preferenciasAlimentares || [],
+        restricoes: answers.restricoes || [],
+        alimentos_gosta: answers.alimentosGosta || [],
+        alimentos_nao_gosta: answers.alimentosNaoGosta || [],
+        consumo_agua: answers.consumoAgua || null,
+        media_sono: answers.mediaSono || null,
+        maior_dificuldade: answers.maiorDificuldade || null,
+        onboarding_completed: true,
+      }).eq("user_id", user.id);
+
+      setShowComplete(true);
+    } catch (err) {
+      toast.error("Erro ao salvar. Tente novamente.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -79,7 +129,6 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center justify-between mb-4">
           <button onClick={handleBack} className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-secondary transition-colors active:scale-95">
@@ -91,7 +140,6 @@ export default function Onboarding() {
         <ProgressBar value={step + 1} max={total} variant="primary" size="sm" />
       </div>
 
-      {/* Content */}
       <div className="flex-1 flex flex-col px-6 pt-8 pb-6" key={step}>
         <div className="space-y-2 mb-8 animate-fade-up">
           <h2 className="text-xl font-semibold text-foreground leading-snug">
@@ -185,10 +233,9 @@ export default function Onboarding() {
           )}
         </div>
 
-        {/* Continue button */}
         <div className="pt-4">
-          <Button variant="hero" className="w-full" onClick={handleNext}>
-            {step === total - 1 ? "Finalizar" : "Continuar"}
+          <Button variant="hero" className="w-full" onClick={handleNext} disabled={saving}>
+            {saving ? "Salvando..." : step === total - 1 ? "Finalizar" : "Continuar"}
           </Button>
         </div>
       </div>

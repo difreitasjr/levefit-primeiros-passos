@@ -1,24 +1,49 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { checkInCompleto } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function CheckIn() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [respostas, setRespostas] = useState<Record<string, any>>({});
   const [energyLevel, setEnergyLevel] = useState(3);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const setResposta = (id: string, value: any) => {
     setRespostas((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleSave = () => setSaved(true);
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    const { error } = await supabase.from("daily_checkins").upsert({
+      user_id: user.id,
+      date: new Date().toISOString().split("T")[0],
+      humor: respostas.humor || null,
+      energia: respostas.energia || energyLevel,
+      alimentacao: respostas.alimentacao || null,
+      agua: respostas.agua || null,
+      treino: respostas.treino || null,
+      sono: respostas.sono || null,
+      nota: respostas.nota || null,
+    }, { onConflict: "user_id,date" });
 
-  // Pick feedback based on mood
+    setSaving(false);
+    if (error) {
+      toast.error("Erro ao salvar check-in");
+    } else {
+      setSaved(true);
+    }
+  };
+
   const feedbackIndex = respostas.humor === "Bem" || respostas.humor === "Motivada" ? 0
     : respostas.humor === "Desanimada" ? 2 : 1;
   const feedback = checkInCompleto.feedbacks[feedbackIndex];
@@ -139,8 +164,8 @@ export default function CheckIn() {
         ))}
 
         <div className="animate-fade-up" style={{ animationDelay: "500ms" }}>
-          <Button variant="hero" className="w-full" onClick={handleSave}>
-            Salvar check-in 💛
+          <Button variant="hero" className="w-full" onClick={handleSave} disabled={saving}>
+            {saving ? "Salvando..." : "Salvar check-in 💛"}
           </Button>
         </div>
       </div>

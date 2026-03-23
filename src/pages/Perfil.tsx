@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { mockUser } from "@/data/mockData";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   ChevronLeft,
@@ -10,59 +11,90 @@ import {
   Utensils,
   Bell,
   Calendar,
-  Settings,
   LogOut,
   Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function Perfil() {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [lembretes, setLembretes] = useState({
-    treino: mockUser.lembreteTreino,
-    agua: mockUser.lembreteAgua,
-    refeicao: mockUser.lembreteRefeicao,
-    sono: mockUser.lembreteSono,
+    treino: true,
+    agua: true,
+    refeicao: true,
+    sono: true,
   });
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setProfile(data);
+        setLoading(false);
+      });
+  }, [user]);
 
   const toggleLembrete = (key: keyof typeof lembretes) => {
     setLembretes((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const p = profile || {};
+
   const sections = [
     {
       titulo: "Dados pessoais",
       items: [
-        { label: "Nome", value: mockUser.nome, icon: User },
-        { label: "Idade", value: `${mockUser.idade} anos`, icon: User },
-        { label: "Peso atual", value: `${mockUser.pesoAtual}kg`, icon: User },
-        { label: "Altura", value: `${mockUser.altura}cm`, icon: User },
-        { label: "E-mail", value: mockUser.email, icon: User },
+        { label: "Nome", value: p.nome || "—", icon: User },
+        { label: "Idade", value: p.idade ? `${p.idade} anos` : "—", icon: User },
+        { label: "Peso atual", value: p.peso_atual ? `${p.peso_atual}kg` : "—", icon: User },
+        { label: "Altura", value: p.altura ? `${p.altura}cm` : "—", icon: User },
+        { label: "E-mail", value: user?.email || "—", icon: User },
       ],
     },
     {
       titulo: "Objetivo e metas",
       items: [
-        { label: "Objetivo", value: mockUser.objetivo, icon: Target },
-        { label: "Meta", value: mockUser.meta, icon: Target },
-        { label: "Nível de atividade", value: mockUser.nivelAtividade, icon: Target },
+        { label: "Objetivo", value: p.objetivo || "—", icon: Target },
+        { label: "Meta", value: p.meta || "—", icon: Target },
+        { label: "Nível de atividade", value: p.nivel_atividade || "—", icon: Target },
       ],
     },
     {
       titulo: "Alimentação",
       items: [
-        { label: "Preferências", value: mockUser.preferenciasAlimentares.join(", "), icon: Utensils },
-        { label: "Restrições", value: mockUser.restricoes.join(", "), icon: Utensils },
+        { label: "Preferências", value: (p.preferencias_alimentares || []).join(", ") || "—", icon: Utensils },
+        { label: "Restrições", value: (p.restricoes || []).join(", ") || "—", icon: Utensils },
       ],
     },
     {
       titulo: "Rotina",
       items: [
-        { label: "Rotina", value: mockUser.rotina, icon: Calendar },
-        { label: "Frequência de treino", value: mockUser.frequenciaTreino, icon: Calendar },
-        { label: "Horário de treino", value: mockUser.horarioTreino, icon: Calendar },
-        { label: "Consumo de água", value: mockUser.consumoAgua, icon: Calendar },
-        { label: "Média de sono", value: mockUser.mediaSono, icon: Calendar },
+        { label: "Rotina", value: p.rotina || "—", icon: Calendar },
+        { label: "Frequência de treino", value: p.frequencia_treino || "—", icon: Calendar },
+        { label: "Horário de treino", value: p.horario_treino || "—", icon: Calendar },
+        { label: "Consumo de água", value: p.consumo_agua || "—", icon: Calendar },
+        { label: "Média de sono", value: p.media_sono || "—", icon: Calendar },
       ],
     },
   ];
@@ -76,7 +108,6 @@ export default function Perfil() {
 
   return (
     <div className="min-h-screen bg-background pb-12">
-      {/* Header */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center gap-3 mb-4">
           <button
@@ -92,19 +123,17 @@ export default function Perfil() {
       </div>
 
       <div className="px-5 space-y-4">
-        {/* Avatar card */}
         <div className="bg-card card-elevated rounded-2xl p-5 flex items-center gap-4 animate-fade-up">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
             <Heart className="text-primary" size={24} strokeWidth={1.5} />
           </div>
           <div>
-            <p className="text-lg font-semibold text-foreground">{mockUser.nome}</p>
-            <p className="text-xs text-muted-foreground">{mockUser.email}</p>
-            <p className="text-xs text-primary font-medium mt-0.5">{mockUser.objetivo}</p>
+            <p className="text-lg font-semibold text-foreground">{p.nome || "Usuária"}</p>
+            <p className="text-xs text-muted-foreground">{user?.email}</p>
+            <p className="text-xs text-primary font-medium mt-0.5">{p.objetivo || ""}</p>
           </div>
         </div>
 
-        {/* Sections */}
         {sections.map((section, sIdx) => (
           <div
             key={section.titulo}
@@ -136,7 +165,6 @@ export default function Perfil() {
           </div>
         ))}
 
-        {/* Lembretes / Notificações */}
         <div
           className="bg-card card-elevated rounded-2xl overflow-hidden animate-fade-up"
           style={{ animationDelay: `${(sections.length + 1) * 60}ms` }}
@@ -176,12 +204,11 @@ export default function Perfil() {
           </div>
         </div>
 
-        {/* Logout */}
         <Button
           variant="ghost"
           className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/5 animate-fade-up"
           style={{ animationDelay: `${(sections.length + 2) * 60}ms` }}
-          onClick={() => navigate("/")}
+          onClick={handleLogout}
         >
           <LogOut size={16} />
           Sair da conta
