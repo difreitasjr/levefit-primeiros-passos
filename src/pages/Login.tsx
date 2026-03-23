@@ -29,7 +29,7 @@ function Login() {
     setCarregando(false)
 
     setTimeout(() => {
-      navigate('/app')
+      navigate('/onboarding')
     }, 800)
   }
 
