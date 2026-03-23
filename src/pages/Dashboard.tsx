@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import {
-  mockUser,
   fraseDoDia,
   refeicoesDoDia,
   aguaDoDia,
@@ -26,13 +27,54 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface Profile {
+  nome: string | null;
+  objetivo: string | null;
+  meta: string | null;
+  peso_atual: number | null;
+  onboarding_completed: boolean;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [todayCheckin, setTodayCheckin] = useState<any>(null);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
-  const frase = fraseDoDia[Math.floor(Date.now() / 86400000) % fraseDoDia.length];
+  const [loading, setLoading] = useState(true);
 
+  const frase = fraseDoDia[Math.floor(Date.now() / 86400000) % fraseDoDia.length];
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+
+  useEffect(() => {
+    if (!user) return;
+
+    const loadData = async () => {
+      const [profileRes, checkinRes] = await Promise.all([
+        supabase.from("profiles").select("nome, objetivo, meta, peso_atual, onboarding_completed").eq("user_id", user.id).single(),
+        supabase.from("daily_checkins").select("*").eq("user_id", user.id).eq("date", new Date().toISOString().split("T")[0]).maybeSingle(),
+      ]);
+
+      if (profileRes.data) {
+        setProfile(profileRes.data);
+        if (!profileRes.data.onboarding_completed) {
+          navigate("/onboarding");
+          return;
+        }
+      }
+      if (checkinRes.data) {
+        setTodayCheckin(checkinRes.data);
+        setSelectedMood(checkinRes.data.humor);
+      }
+      setLoading(false);
+    };
+
+    loadData();
+  }, [user, navigate]);
+
+  const displayName = profile?.nome || "você";
+  const displayMeta = profile?.meta || "Definir sua meta";
 
   const atalhos = [
     { icon: Utensils, label: "Alimentação", color: "bg-primary/10 text-primary", path: "/alimentacao" },
@@ -41,6 +83,14 @@ export default function Dashboard() {
     { icon: Sparkles, label: "Desafios", color: "bg-primary/10 text-primary", path: "/desafios" },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -48,13 +98,13 @@ export default function Dashboard() {
         <div className="flex items-center justify-between animate-fade-up">
           <div>
             <p className="text-sm text-muted-foreground font-medium">{saudacao},</p>
-            <h1 className="text-2xl font-semibold text-foreground">{mockUser.nome} 💛</h1>
+            <h1 className="text-2xl font-semibold text-foreground">{displayName} 💛</h1>
           </div>
           <button
             onClick={() => navigate("/perfil")}
             className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/15 transition-colors active:scale-95"
           >
-            <span className="text-sm font-semibold">{mockUser.nome.charAt(0)}</span>
+            <span className="text-sm font-semibold">{displayName.charAt(0).toUpperCase()}</span>
           </button>
         </div>
         <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up" style={{ animationDelay: "80ms" }}>
@@ -68,7 +118,7 @@ export default function Dashboard() {
       <div className="px-5 space-y-4">
         {/* Meta do dia */}
         <DashCard title="Meta do dia" icon={Target} delay={120}>
-          <p className="text-sm font-medium text-foreground">{mockUser.meta}</p>
+          <p className="text-sm font-medium text-foreground">{displayMeta}</p>
           <p className="text-xs text-muted-foreground mt-1">
             Sequência: {progressoSemanal.sequencia} dias 🔥
           </p>
@@ -97,7 +147,7 @@ export default function Dashboard() {
           </div>
         </DashCard>
 
-        {/* Água e Sono side by side */}
+        {/* Água e Sono */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
             <div className="flex items-center gap-2 mb-3">
@@ -148,22 +198,30 @@ export default function Dashboard() {
 
         {/* Check-in */}
         <button onClick={() => navigate("/checkin")} className="w-full text-left">
-          <DashCard title="Como você está hoje?" icon={Sparkles} delay={320}>
-            <div className="flex justify-between">
-              {checkInRapido.opcoes.map((o) => (
-                <div
-                  key={o.label}
-                  className={cn(
-                    "flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-all",
-                    selectedMood === o.label ? "bg-primary/10" : ""
-                  )}
-                >
-                  <span className="text-xl">{o.emoji}</span>
-                  <span className="text-[10px] text-muted-foreground font-medium">{o.label}</span>
+          <DashCard title={todayCheckin ? "Check-in feito ✅" : "Como você está hoje?"} icon={Sparkles} delay={320}>
+            {todayCheckin ? (
+              <p className="text-sm text-muted-foreground">
+                Humor: {todayCheckin.humor || "—"} · Energia: {todayCheckin.energia || "—"}/5
+              </p>
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  {checkInRapido.opcoes.map((o) => (
+                    <div
+                      key={o.label}
+                      className={cn(
+                        "flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-all",
+                        selectedMood === o.label ? "bg-primary/10" : ""
+                      )}
+                    >
+                      <span className="text-xl">{o.emoji}</span>
+                      <span className="text-[10px] text-muted-foreground font-medium">{o.label}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <p className="text-xs text-primary font-medium mt-2">Fazer check-in completo →</p>
+                <p className="text-xs text-primary font-medium mt-2">Fazer check-in completo →</p>
+              </>
+            )}
           </DashCard>
         </button>
 
@@ -175,8 +233,8 @@ export default function Dashboard() {
               <span className="text-muted-foreground">/{progressoSemanal.totalDias} dias</span>
             </p>
             <span className="text-xs text-accent font-semibold">
-              {progressoSemanal.pesoInicio > progressoSemanal.pesoAtual ? "-" : "+"}
-              {Math.abs(progressoSemanal.pesoInicio - progressoSemanal.pesoAtual).toFixed(1)}kg
+              {profile?.peso_atual && progressoSemanal.pesoInicio > (profile.peso_atual || 0) ? "-" : "+"}
+              {Math.abs(progressoSemanal.pesoInicio - (profile?.peso_atual || progressoSemanal.pesoAtual)).toFixed(1)}kg
             </span>
           </div>
           <div className="space-y-2.5">
@@ -222,7 +280,6 @@ export default function Dashboard() {
   );
 }
 
-// Reusable dashboard card
 function DashCard({
   title,
   icon: Icon,
