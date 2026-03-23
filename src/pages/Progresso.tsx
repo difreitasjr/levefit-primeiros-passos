@@ -23,18 +23,30 @@ export default function Progresso() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [checkinCount, setCheckinCount] = useState(0);
+  const [workoutCount, setWorkoutCount] = useState(0);
+  const [progressLogs, setProgressLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const p = progressoDetalhado;
 
   useEffect(() => {
     if (!user) return;
     const load = async () => {
-      const [profileRes, checkinsRes] = await Promise.all([
-        supabase.from("profiles").select("peso_atual, peso_inicial").eq("user_id", user.id).single(),
-        supabase.from("daily_checkins").select("id", { count: "exact" }).eq("user_id", user.id),
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay());
+      const weekStartStr = weekStart.toISOString().split("T")[0];
+
+      const [profileRes, checkinsRes, workoutsRes, progressRes] = await Promise.all([
+        supabase.from("profiles").select("peso_atual, peso_inicial").eq("user_id", user.id).maybeSingle(),
+        supabase.from("daily_checkins").select("id", { count: "exact" }).eq("user_id", user.id).gte("date", weekStartStr),
+        supabase.from("workout_logs").select("id", { count: "exact" }).eq("user_id", user.id).eq("concluido", true).gte("date", weekStartStr),
+        supabase.from("progress_logs").select("*").eq("user_id", user.id).order("date", { ascending: true }),
       ]);
+
       if (profileRes.data) setProfile(profileRes.data);
       setCheckinCount(checkinsRes.count || 0);
+      setWorkoutCount(workoutsRes.count || 0);
+      if (progressRes.data) setProgressLogs(progressRes.data);
       setLoading(false);
     };
     load();
@@ -44,9 +56,27 @@ export default function Progresso() {
   const pesoInicial = profile?.peso_inicial || p.pesoHistorico[0].peso;
   const pesoTotal = pesoInicial - pesoAtual;
 
-  const maxPeso = Math.max(...p.pesoHistorico.map((h) => h.peso));
-  const minPeso = Math.min(...p.pesoHistorico.map((h) => h.peso));
+  // Use real progress_logs for weight chart if available, else mock
+  const pesoHistorico = progressLogs.length >= 2
+    ? progressLogs.filter((l) => l.peso).map((l, i) => ({ semana: `Sem ${i + 1}`, peso: l.peso }))
+    : p.pesoHistorico;
+
+  const maxPeso = Math.max(...pesoHistorico.map((h) => h.peso));
+  const minPeso = Math.min(...pesoHistorico.map((h) => h.peso));
   const range = maxPeso - minPeso || 1;
+
+  // Use last progress_log for measurements if available
+  const lastProgress = progressLogs.length > 0 ? progressLogs[progressLogs.length - 1] : null;
+  const firstProgress = progressLogs.length > 0 ? progressLogs[0] : null;
+
+  const medidas = lastProgress && firstProgress
+    ? {
+        cintura: { atual: lastProgress.cintura || p.medidas.cintura.atual, inicial: firstProgress.cintura || p.medidas.cintura.inicial },
+        quadril: { atual: lastProgress.quadril || p.medidas.quadril.atual, inicial: firstProgress.quadril || p.medidas.quadril.inicial },
+        braco: { atual: lastProgress.braco || p.medidas.braco.atual, inicial: firstProgress.braco || p.medidas.braco.inicial },
+        coxa: { atual: lastProgress.coxa || p.medidas.coxa.atual, inicial: firstProgress.coxa || p.medidas.coxa.inicial },
+      }
+    : p.medidas;
 
   if (loading) {
     return (
@@ -97,9 +127,9 @@ export default function Progresso() {
           </div>
 
           <div className="flex items-end gap-1 h-24">
-            {p.pesoHistorico.map((h, i) => {
+            {pesoHistorico.map((h, i) => {
               const height = ((maxPeso - h.peso) / range) * 100;
-              const isLast = i === p.pesoHistorico.length - 1;
+              const isLast = i === pesoHistorico.length - 1;
               return (
                 <div key={h.semana} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full flex flex-col justify-end h-20">
@@ -114,7 +144,7 @@ export default function Progresso() {
                       }}
                     />
                   </div>
-                  {(i === 0 || isLast || i === Math.floor(p.pesoHistorico.length / 2)) && (
+                  {(i === 0 || isLast || i === Math.floor(pesoHistorico.length / 2)) && (
                     <span className="text-[8px] text-muted-foreground tabular-nums">{h.peso}</span>
                   )}
                 </div>
@@ -130,7 +160,7 @@ export default function Progresso() {
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Medidas</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {Object.entries(p.medidas).map(([key, val]) => {
+            {Object.entries(medidas).map(([key, val]) => {
               const labels: Record<string, string> = {
                 cintura: "Cintura",
                 quadril: "Quadril",
@@ -144,7 +174,9 @@ export default function Progresso() {
                   <p className="text-lg font-semibold text-foreground tabular-nums">
                     {val.atual}<span className="text-xs font-normal">cm</span>
                   </p>
-                  <p className="text-xs text-accent font-medium">-{diff}cm</p>
+                  <p className={cn("text-xs font-medium", diff > 0 ? "text-accent" : "text-muted-foreground")}>
+                    {diff > 0 ? `-${diff}cm` : diff === 0 ? "—" : `+${Math.abs(diff)}cm`}
+                  </p>
                 </div>
               );
             })}
@@ -155,10 +187,10 @@ export default function Progresso() {
         <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up" style={{ animationDelay: "160ms" }}>
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Adesão da semana</span>
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <StatMini icon={Calendar} label="Check-ins" value={`${checkinCount > 0 ? Math.min(checkinCount, 7) : p.semanaAtual.diasCheckIn}/${p.semanaAtual.totalDias}`} color="text-primary" />
+            <StatMini icon={Calendar} label="Check-ins" value={`${checkinCount}/7`} color="text-primary" />
             <StatMini icon={Droplets} label="Água média" value={`${p.semanaAtual.aguaMedia}L`} color="text-accent" />
             <StatMini icon={Moon} label="Sono médio" value={`${p.semanaAtual.sonoMedio}h`} color="text-primary" />
-            <StatMini icon={Dumbbell} label="Treinos" value={`${p.semanaAtual.treinosConcluidos}/${p.semanaAtual.treinosMeta}`} color="text-terracotta" />
+            <StatMini icon={Dumbbell} label="Treinos" value={`${workoutCount}/${p.semanaAtual.treinosMeta}`} color="text-terracotta" />
           </div>
         </div>
 

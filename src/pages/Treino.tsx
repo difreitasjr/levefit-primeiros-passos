@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { treinoCompleto } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
@@ -14,12 +16,16 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function Treino() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [treino, setTreino] = useState(treinoCompleto);
   const [showComplete, setShowComplete] = useState(false);
   const [showCantToday, setShowCantToday] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const today = new Date().toISOString().split("T")[0];
 
   const allExercicios = [
     ...treino.aquecimento.map((e) => ({ ...e, secao: "aquecimento" })),
@@ -38,8 +44,41 @@ export default function Treino() {
     });
   };
 
-  const handleComplete = () => setShowComplete(true);
+  const saveWorkout = async (concluido: boolean, tipo: string) => {
+    if (!user) return;
+    setSaving(true);
+    const exerciciosFeitos = allExercicios
+      .filter((e) => e.feito)
+      .map((e) => e.nome);
+
+    const { error } = await supabase.from("workout_logs").upsert(
+      {
+        user_id: user.id,
+        date: today,
+        tipo,
+        concluido,
+        duracao: treino.duracao,
+        exercicios_feitos: exerciciosFeitos,
+      },
+      { onConflict: "user_id,date" }
+    );
+    setSaving(false);
+    if (error) {
+      toast.error("Erro ao salvar treino");
+    }
+  };
+
+  const handleComplete = async () => {
+    await saveWorkout(true, treino.tipo);
+    setShowComplete(true);
+  };
+
   const handleCantToday = () => setShowCantToday(true);
+
+  const handleWalkDone = async () => {
+    await saveWorkout(true, treino.alternativa.tipo);
+    navigate("/dashboard");
+  };
 
   if (showComplete) {
     return (
@@ -89,8 +128,8 @@ export default function Treino() {
             <p className="text-sm text-foreground leading-relaxed">
               {treino.alternativa.descricao}
             </p>
-            <Button variant="accent" className="w-full" onClick={() => navigate("/dashboard")}>
-              Feito! Voltei da caminhada 🚶‍♀️
+            <Button variant="accent" className="w-full" onClick={handleWalkDone} disabled={saving}>
+              {saving ? "Salvando..." : "Feito! Voltei da caminhada 🚶‍♀️"}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-4 italic">
@@ -104,7 +143,6 @@ export default function Treino() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center gap-3 mb-4">
           <button
@@ -119,7 +157,6 @@ export default function Treino() {
           </div>
         </div>
 
-        {/* Overview */}
         <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up">
           <div className="flex items-center gap-4 mb-3">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -136,9 +173,7 @@ export default function Treino() {
         </div>
       </div>
 
-      {/* Sections */}
       <div className="px-5 space-y-5">
-        {/* Aquecimento */}
         <Section title="🔥 Aquecimento" delay={80}>
           {treino.aquecimento.map((e, i) => (
             <ExercicioRow
@@ -151,7 +186,6 @@ export default function Treino() {
           ))}
         </Section>
 
-        {/* Principal */}
         <Section title="💪 Treino principal" delay={160}>
           {treino.principal.map((e, i) => (
             <ExercicioRow
@@ -164,7 +198,6 @@ export default function Treino() {
           ))}
         </Section>
 
-        {/* Finalização */}
         <Section title="🧘‍♀️ Finalização" delay={240}>
           {treino.finalizacao.map((e, i) => (
             <ExercicioRow
@@ -177,10 +210,9 @@ export default function Treino() {
           ))}
         </Section>
 
-        {/* Actions */}
         <div className="space-y-2 animate-fade-up" style={{ animationDelay: "320ms" }}>
-          <Button variant="hero" className="w-full" onClick={handleComplete}>
-            Treino concluído ✅
+          <Button variant="hero" className="w-full" onClick={handleComplete} disabled={saving}>
+            {saving ? "Salvando..." : "Treino concluído ✅"}
           </Button>
           <div className="flex gap-2">
             <Button variant="hero-outline" className="flex-1 h-12 text-sm" onClick={handleCantToday}>

@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 import { refeicoesDoDia, dicasAlimentacao } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
@@ -13,30 +15,108 @@ import {
   Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+interface Refeicao {
+  tipo: string;
+  horario: string;
+  descricao: string;
+  calorias: number;
+  proteina: number;
+  carbs: number;
+  gordura: number;
+  feito: boolean;
+  substituicoes: string[];
+  observacao: string;
+  favorita: boolean;
+}
 
 export default function Alimentacao() {
   const navigate = useNavigate();
-  const [refeicoes, setRefeicoes] = useState(refeicoesDoDia);
+  const { user } = useAuth();
+  const [refeicoes, setRefeicoes] = useState<Refeicao[]>(refeicoesDoDia);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [favoritas, setFavoritas] = useState<Record<number, boolean>>({});
+  const [loading, setLoading] = useState(true);
   const dicaIndex = Math.floor(Date.now() / 86400000) % dicasAlimentacao.length;
+  const today = new Date().toISOString().split("T")[0];
 
-  const toggleFeito = (index: number) => {
-    setRefeicoes((prev) =>
-      prev.map((r, i) => (i === index ? { ...r, feito: !r.feito } : r))
+  // Load saved meal states from DB
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      const { data } = await supabase
+        .from("meal_logs")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("date", today);
+
+      if (data && data.length > 0) {
+        // Merge DB state into mock meals
+        setRefeicoes((prev) =>
+          prev.map((r) => {
+            const saved = data.find((d) => d.tipo_refeicao === r.tipo);
+            if (saved) {
+              return { ...r, feito: saved.concluida, favorita: saved.favorita };
+            }
+            return r;
+          })
+        );
+      }
+      setLoading(false);
+    };
+    load();
+  }, [user, today]);
+
+  const saveMealState = async (refeicao: Refeicao) => {
+    if (!user) return;
+    await supabase.from("meal_logs").upsert(
+      {
+        user_id: user.id,
+        date: today,
+        tipo_refeicao: refeicao.tipo,
+        concluida: refeicao.feito,
+        favorita: refeicao.favorita,
+        descricao: refeicao.descricao,
+        calorias: refeicao.calorias,
+        proteina: refeicao.proteina,
+        carbs: refeicao.carbs,
+        gordura: refeicao.gordura,
+      },
+      { onConflict: "user_id,date,tipo_refeicao" }
     );
   };
 
-  const toggleFavorita = (index: number) => {
-    setFavoritas((prev) => ({ ...prev, [index]: !prev[index] }));
+  const toggleFeito = async (index: number) => {
+    const updated = refeicoes.map((r, i) =>
+      i === index ? { ...r, feito: !r.feito } : r
+    );
+    setRefeicoes(updated);
+    await saveMealState(updated[index]);
+    toast.success(updated[index].feito ? "Refeição concluída! ✅" : "Refeição desmarcada");
+  };
+
+  const toggleFavorita = async (index: number) => {
+    const updated = refeicoes.map((r, i) =>
+      i === index ? { ...r, favorita: !r.favorita } : r
+    );
+    setRefeicoes(updated);
+    await saveMealState(updated[index]);
+    toast.success(updated[index].favorita ? "Salva como favorita 💛" : "Removida dos favoritos");
   };
 
   const totalCal = refeicoes.reduce((sum, r) => sum + r.calorias, 0);
   const feitasCal = refeicoes.filter((r) => r.feito).reduce((sum, r) => sum + r.calorias, 0);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center gap-3 mb-4">
           <button
@@ -51,7 +131,6 @@ export default function Alimentacao() {
           </div>
         </div>
 
-        {/* Summary */}
         <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up">
           <div className="flex items-center justify-between">
             <div>
@@ -75,7 +154,6 @@ export default function Alimentacao() {
         </div>
       </div>
 
-      {/* Meals */}
       <div className="px-5 space-y-3">
         {refeicoes.map((r, i) => {
           const isExpanded = expandedIndex === i;
@@ -85,7 +163,6 @@ export default function Alimentacao() {
               className="bg-card card-elevated rounded-2xl overflow-hidden animate-fade-up"
               style={{ animationDelay: `${i * 60}ms` }}
             >
-              {/* Header */}
               <button
                 onClick={() => setExpandedIndex(isExpanded ? null : i)}
                 className="w-full flex items-center gap-3 p-4 text-left active:scale-[0.99] transition-transform"
@@ -116,16 +193,13 @@ export default function Alimentacao() {
                 </div>
               </button>
 
-              {/* Expanded content */}
               {isExpanded && (
                 <div className="px-4 pb-4 space-y-4 animate-fade-in">
-                  {/* Full description */}
                   <div className="bg-secondary/50 rounded-xl p-3">
                     <p className="text-sm text-foreground leading-relaxed">{r.descricao}</p>
                     <p className="text-xs text-muted-foreground mt-2">{r.calorias} kcal</p>
                   </div>
 
-                  {/* Macros */}
                   <div className="flex gap-3">
                     {[
                       { label: "Proteína", val: `${r.proteina}g`, color: "text-accent" },
@@ -139,14 +213,12 @@ export default function Alimentacao() {
                     ))}
                   </div>
 
-                  {/* Observação */}
                   {r.observacao && (
                     <p className="text-xs text-muted-foreground italic leading-relaxed">
                       💡 {r.observacao}
                     </p>
                   )}
 
-                  {/* Substituições */}
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                       Substituições
@@ -164,7 +236,6 @@ export default function Alimentacao() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-2">
                     <Button
                       variant={r.feito ? "soft" : "default"}
@@ -178,10 +249,10 @@ export default function Alimentacao() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={cn("shrink-0", favoritas[i] && "text-primary")}
+                      className={cn("shrink-0", r.favorita && "text-primary")}
                       onClick={() => toggleFavorita(i)}
                     >
-                      <Heart size={16} fill={favoritas[i] ? "currentColor" : "none"} />
+                      <Heart size={16} fill={r.favorita ? "currentColor" : "none"} />
                     </Button>
                     <Button variant="ghost" size="icon" className="shrink-0">
                       <RefreshCw size={16} />
@@ -193,7 +264,6 @@ export default function Alimentacao() {
           );
         })}
 
-        {/* Dica do dia */}
         <div className="bg-primary/5 rounded-2xl p-4 flex gap-3 animate-fade-up" style={{ animationDelay: "400ms" }}>
           <Lightbulb size={18} className="text-primary shrink-0 mt-0.5" />
           <div>
