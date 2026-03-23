@@ -14,7 +14,267 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_checkins: {
+        Row: {
+          agua: string | null
+          alimentacao: string | null
+          created_at: string
+          date: string
+          energia: number | null
+          humor: string | null
+          id: string
+          nota: string | null
+          sono: string | null
+          treino: string | null
+          user_id: string
+        }
+        Insert: {
+          agua?: string | null
+          alimentacao?: string | null
+          created_at?: string
+          date?: string
+          energia?: number | null
+          humor?: string | null
+          id?: string
+          nota?: string | null
+          sono?: string | null
+          treino?: string | null
+          user_id: string
+        }
+        Update: {
+          agua?: string | null
+          alimentacao?: string | null
+          created_at?: string
+          date?: string
+          energia?: number | null
+          humor?: string | null
+          id?: string
+          nota?: string | null
+          sono?: string | null
+          treino?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meal_logs: {
+        Row: {
+          calorias: number | null
+          carbs: number | null
+          concluida: boolean
+          created_at: string
+          date: string
+          descricao: string | null
+          favorita: boolean
+          gordura: number | null
+          id: string
+          proteina: number | null
+          tipo_refeicao: string
+          user_id: string
+        }
+        Insert: {
+          calorias?: number | null
+          carbs?: number | null
+          concluida?: boolean
+          created_at?: string
+          date?: string
+          descricao?: string | null
+          favorita?: boolean
+          gordura?: number | null
+          id?: string
+          proteina?: number | null
+          tipo_refeicao: string
+          user_id: string
+        }
+        Update: {
+          calorias?: number | null
+          carbs?: number | null
+          concluida?: boolean
+          created_at?: string
+          date?: string
+          descricao?: string | null
+          favorita?: boolean
+          gordura?: number | null
+          id?: string
+          proteina?: number | null
+          tipo_refeicao?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      onboarding_answers: {
+        Row: {
+          answers: Json
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          alimentos_gosta: string[] | null
+          alimentos_nao_gosta: string[] | null
+          altura: number | null
+          consumo_agua: string | null
+          created_at: string
+          frequencia_treino: string | null
+          horario_treino: string | null
+          id: string
+          idade: number | null
+          maior_dificuldade: string | null
+          media_sono: string | null
+          meta: string | null
+          nivel_atividade: string | null
+          nome: string | null
+          objetivo: string | null
+          onboarding_completed: boolean
+          peso_atual: number | null
+          peso_inicial: number | null
+          preferencias_alimentares: string[] | null
+          restricoes: string[] | null
+          rotina: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alimentos_gosta?: string[] | null
+          alimentos_nao_gosta?: string[] | null
+          altura?: number | null
+          consumo_agua?: string | null
+          created_at?: string
+          frequencia_treino?: string | null
+          horario_treino?: string | null
+          id?: string
+          idade?: number | null
+          maior_dificuldade?: string | null
+          media_sono?: string | null
+          meta?: string | null
+          nivel_atividade?: string | null
+          nome?: string | null
+          objetivo?: string | null
+          onboarding_completed?: boolean
+          peso_atual?: number | null
+          peso_inicial?: number | null
+          preferencias_alimentares?: string[] | null
+          restricoes?: string[] | null
+          rotina?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alimentos_gosta?: string[] | null
+          alimentos_nao_gosta?: string[] | null
+          altura?: number | null
+          consumo_agua?: string | null
+          created_at?: string
+          frequencia_treino?: string | null
+          horario_treino?: string | null
+          id?: string
+          idade?: number | null
+          maior_dificuldade?: string | null
+          media_sono?: string | null
+          meta?: string | null
+          nivel_atividade?: string | null
+          nome?: string | null
+          objetivo?: string | null
+          onboarding_completed?: boolean
+          peso_atual?: number | null
+          peso_inicial?: number | null
+          preferencias_alimentares?: string[] | null
+          restricoes?: string[] | null
+          rotina?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      progress_logs: {
+        Row: {
+          braco: number | null
+          cintura: number | null
+          coxa: number | null
+          created_at: string
+          date: string
+          id: string
+          nota: string | null
+          peso: number | null
+          quadril: number | null
+          user_id: string
+        }
+        Insert: {
+          braco?: number | null
+          cintura?: number | null
+          coxa?: number | null
+          created_at?: string
+          date?: string
+          id?: string
+          nota?: string | null
+          peso?: number | null
+          quadril?: number | null
+          user_id: string
+        }
+        Update: {
+          braco?: number | null
+          cintura?: number | null
+          coxa?: number | null
+          created_at?: string
+          date?: string
+          id?: string
+          nota?: string | null
+          peso?: number | null
+          quadril?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      workout_logs: {
+        Row: {
+          concluido: boolean
+          created_at: string
+          date: string
+          duracao: string | null
+          exercicios_feitos: Json | null
+          id: string
+          nota: string | null
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          concluido?: boolean
+          created_at?: string
+          date?: string
+          duracao?: string | null
+          exercicios_feitos?: Json | null
+          id?: string
+          nota?: string | null
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          concluido?: boolean
+          created_at?: string
+          date?: string
+          duracao?: string | null
+          exercicios_feitos?: Json | null
+          id?: string
+          nota?: string | null
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
