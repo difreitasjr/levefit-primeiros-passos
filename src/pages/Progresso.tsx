@@ -1,6 +1,9 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
-import { progressoDetalhado, mockUser } from "@/data/mockData";
+import { progressoDetalhado } from "@/data/mockData";
 import { ProgressBar } from "@/components/ProgressBar";
 import {
   ChevronLeft,
@@ -17,17 +20,44 @@ import { cn } from "@/lib/utils";
 
 export default function Progresso() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  const [checkinCount, setCheckinCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const p = progressoDetalhado;
-  const pesoTotal = mockUser.pesoInicial - mockUser.pesoAtual;
 
-  // Simple chart — bar chart representation
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      const [profileRes, checkinsRes] = await Promise.all([
+        supabase.from("profiles").select("peso_atual, peso_inicial").eq("user_id", user.id).single(),
+        supabase.from("daily_checkins").select("id", { count: "exact" }).eq("user_id", user.id),
+      ]);
+      if (profileRes.data) setProfile(profileRes.data);
+      setCheckinCount(checkinsRes.count || 0);
+      setLoading(false);
+    };
+    load();
+  }, [user]);
+
+  const pesoAtual = profile?.peso_atual || p.pesoHistorico[p.pesoHistorico.length - 1].peso;
+  const pesoInicial = profile?.peso_inicial || p.pesoHistorico[0].peso;
+  const pesoTotal = pesoInicial - pesoAtual;
+
   const maxPeso = Math.max(...p.pesoHistorico.map((h) => h.peso));
   const minPeso = Math.min(...p.pesoHistorico.map((h) => h.peso));
   const range = maxPeso - minPeso || 1;
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center gap-3 mb-4">
           <button
@@ -53,20 +83,19 @@ export default function Progresso() {
           <div className="flex items-end justify-between mb-4">
             <div>
               <p className="text-3xl font-semibold text-foreground tabular-nums">
-                {mockUser.pesoAtual}
+                {pesoAtual}
                 <span className="text-sm font-normal text-muted-foreground">kg</span>
               </p>
               <p className="text-xs text-accent font-medium mt-0.5">
-                -{pesoTotal.toFixed(1)}kg desde o início
+                {pesoTotal > 0 ? `-${pesoTotal.toFixed(1)}` : `+${Math.abs(pesoTotal).toFixed(1)}`}kg desde o início
               </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-muted-foreground">Início</p>
-              <p className="text-sm font-medium text-foreground tabular-nums">{mockUser.pesoInicial}kg</p>
+              <p className="text-sm font-medium text-foreground tabular-nums">{pesoInicial}kg</p>
             </div>
           </div>
 
-          {/* Simple bar chart */}
           <div className="flex items-end gap-1 h-24">
             {p.pesoHistorico.map((h, i) => {
               const height = ((maxPeso - h.peso) / range) * 100;
@@ -126,7 +155,7 @@ export default function Progresso() {
         <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up" style={{ animationDelay: "160ms" }}>
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Adesão da semana</span>
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <StatMini icon={Calendar} label="Check-ins" value={`${p.semanaAtual.diasCheckIn}/${p.semanaAtual.totalDias}`} color="text-primary" />
+            <StatMini icon={Calendar} label="Check-ins" value={`${checkinCount > 0 ? Math.min(checkinCount, 7) : p.semanaAtual.diasCheckIn}/${p.semanaAtual.totalDias}`} color="text-primary" />
             <StatMini icon={Droplets} label="Água média" value={`${p.semanaAtual.aguaMedia}L`} color="text-accent" />
             <StatMini icon={Moon} label="Sono médio" value={`${p.semanaAtual.sonoMedio}h`} color="text-primary" />
             <StatMini icon={Dumbbell} label="Treinos" value={`${p.semanaAtual.treinosConcluidos}/${p.semanaAtual.treinosMeta}`} color="text-terracotta" />
@@ -159,7 +188,7 @@ export default function Progresso() {
           </div>
         </div>
 
-        {/* Vitórias não ligadas à balança */}
+        {/* Vitórias */}
         <div className="bg-primary/5 rounded-2xl p-4 animate-fade-up" style={{ animationDelay: "320ms" }}>
           <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">
             Vitórias além da balança 💛
