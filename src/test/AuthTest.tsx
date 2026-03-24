@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase/client'
+import { supabase } from '@/integrations/supabase/client'
 
 function AuthTest() {
   const [email, setEmail] = useState('')
