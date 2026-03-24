@@ -22,17 +22,17 @@ function Onboarding() {
 
     try {
       if (user) {
-        await supabase.from('profiles').upsert({
+        await supabase.from('profiles').upsert([{
           user_id: user.id,
           nome,
           objetivo,
           onboarding_completed: true,
-        }, { onConflictFields: ['user_id'] })
+        }], { onConflict: 'user_id' })
 
-        await supabase.from('onboarding_answers').upsert({
+        await supabase.from('onboarding_answers').upsert([{
           user_id: user.id,
           answers: { nome, objetivo },
-        }, { onConflictFields: ['user_id'] })
+        }], { onConflict: 'user_id' })
       }
 
       navigate('/dashboard')
