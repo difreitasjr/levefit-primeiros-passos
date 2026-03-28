@@ -1,279 +1,149 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { BottomNav } from "@/components/BottomNav";
-import { treinoCompleto } from "@/data/mockData";
-import { Button } from "@/components/ui/button";
-import { ProgressBar } from "@/components/ProgressBar";
-import {
-  ChevronLeft,
-  Check,
-  Flame,
-  Timer,
-  Gauge,
-  Footprints,
-  Sparkles,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useWorkouts } from '@/hooks/useDailyData';
+import { useAuth } from '@/hooks/useAuth';
+import { ArrowLeft, Dumbbell, Plus, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 export default function Treino() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [treino, setTreino] = useState(treinoCompleto);
-  const [showComplete, setShowComplete] = useState(false);
-  const [showCantToday, setShowCantToday] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const today = new Date().toISOString().split("T")[0];
+  const { data: workout, toggleWorkout } = useWorkouts();
+  
+  const [workoutType, setWorkoutType] = useState('musculacao');
+  const [duration, setDuration] = useState(60);
+  const [level, setLevel] = useState('moderado');
 
-  const allExercicios = [
-    ...treino.aquecimento.map((e) => ({ ...e, secao: "aquecimento" })),
-    ...treino.principal.map((e) => ({ ...e, secao: "principal" })),
-    ...treino.finalizacao.map((e) => ({ ...e, secao: "finalizacao" })),
+  const workoutTypes = [
+    { value: 'musculacao', label: '💪 Musculação' },
+    { value: 'cardio', label: '🏃 Cardio' },
+    { value: 'flexibilidade', label: '🧘 Flexibilidade' },
+    { value: 'esportes', label: '⚽ Esportes' },
   ];
-  const totalFeitos = allExercicios.filter((e) => e.feito).length;
-  const totalExercicios = allExercicios.length;
-
-  const toggleExercicio = (secao: string, index: number) => {
-    setTreino((prev) => {
-      const key = secao as "aquecimento" | "principal" | "finalizacao";
-      const updated = [...prev[key]];
-      updated[index] = { ...updated[index], feito: !updated[index].feito };
-      return { ...prev, [key]: updated };
-    });
-  };
-
-  const saveWorkout = async (concluido: boolean, tipo: string) => {
-    if (!user) return;
-    setSaving(true);
-    const exerciciosFeitos = allExercicios
-      .filter((e) => e.feito)
-      .map((e) => e.nome);
-
-    const { error } = await supabase.from("workout_logs").upsert(
-      {
-        user_id: user.id,
-        date: today,
-        tipo,
-        concluido,
-        duracao: treino.duracao,
-        exercicios_feitos: exerciciosFeitos,
-      },
-      { onConflict: "user_id,date" }
-    );
-    setSaving(false);
-    if (error) {
-      toast.error("Erro ao salvar treino");
-    }
-  };
-
-  const handleComplete = async () => {
-    await saveWorkout(true, treino.tipo);
-    setShowComplete(true);
-  };
-
-  const handleCantToday = () => setShowCantToday(true);
-
-  const handleWalkDone = async () => {
-    await saveWorkout(true, treino.alternativa.tipo);
-    navigate("/dashboard");
-  };
-
-  if (showComplete) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 pb-24">
-        <div className="text-center space-y-4 animate-scale-in">
-          <div className="w-20 h-20 rounded-3xl bg-accent/15 flex items-center justify-center mx-auto">
-            <Sparkles className="text-accent" size={36} strokeWidth={1.5} />
-          </div>
-          <h1 className="text-2xl font-display font-semibold text-foreground">
-            Treino concluído! 🎉
-          </h1>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
-            Você completou seu treino de hoje. Cada sessão te deixa mais forte e mais perto do seu objetivo.
-          </p>
-          <Button variant="hero" className="w-full max-w-xs" onClick={() => navigate("/dashboard")}>
-            Voltar para Hoje
-          </Button>
-        </div>
-        <BottomNav active={2} />
-      </div>
-    );
-  }
-
-  if (showCantToday) {
-    return (
-      <div className="min-h-screen bg-background pb-24">
-        <div className="px-5 pt-5 pb-3">
-          <div className="flex items-center gap-3 mb-4">
-            <button
-              onClick={() => setShowCantToday(false)}
-              className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-secondary transition-colors active:scale-95"
-            >
-              <ChevronLeft size={22} />
-            </button>
-            <h1 className="text-xl font-semibold text-foreground">Movimento alternativo</h1>
-          </div>
-        </div>
-        <div className="px-5 animate-fade-up">
-          <div className="bg-card card-elevated rounded-2xl p-5 space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center">
-              <Footprints className="text-accent" size={26} />
-            </div>
-            <h2 className="text-lg font-semibold text-foreground">{treino.alternativa.tipo}</h2>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Timer size={13} /> {treino.alternativa.duracao}
-            </p>
-            <p className="text-sm text-foreground leading-relaxed">
-              {treino.alternativa.descricao}
-            </p>
-            <Button variant="accent" className="w-full" onClick={handleWalkDone} disabled={saving}>
-              {saving ? "Salvando..." : "Feito! Voltei da caminhada 🚶‍♀️"}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground text-center mt-4 italic">
-            Tudo bem não treinar hoje. Movimento é movimento, do seu jeito.
-          </p>
-        </div>
-        <BottomNav active={2} />
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="px-5 pt-5 pb-3">
-        <div className="flex items-center gap-3 mb-4">
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-secondary transition-colors active:scale-95"
-          >
-            <ChevronLeft size={22} />
-          </button>
-          <div>
-            <h1 className="text-xl font-semibold text-foreground">Treino</h1>
-            <p className="text-xs text-muted-foreground">{treino.tipo}</p>
-          </div>
-        </div>
-
-        <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Timer size={14} /> {treino.duracao}
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Gauge size={14} /> {treino.nivel}
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Flame size={14} /> {totalFeitos}/{totalExercicios}
-            </div>
-          </div>
-          <ProgressBar value={totalFeitos} max={totalExercicios} variant="accent" size="sm" />
+    <div className="min-h-screen bg-background pb-20">
+      {/* Header */}
+      <div className="sticky top-0 bg-background border-b border-border px-5 py-4 flex items-center gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-accent/10 rounded-lg transition-colors"
+        >
+          <ArrowLeft size={20} className="text-foreground" />
+        </button>
+        <div className="flex items-center gap-2">
+          <Dumbbell size={20} className="text-primary" />
+          <h1 className="text-lg font-semibold text-foreground">Treino</h1>
         </div>
       </div>
 
-      <div className="px-5 space-y-5">
-        <Section title="🔥 Aquecimento" delay={80}>
-          {treino.aquecimento.map((e, i) => (
-            <ExercicioRow
-              key={e.nome}
-              nome={e.nome}
-              detalhe={e.duracao}
-              feito={e.feito}
-              onToggle={() => toggleExercicio("aquecimento", i)}
-            />
-          ))}
-        </Section>
+      {/* Content */}
+      <div className="px-5 py-6 space-y-6">
+        {/* Treino Info */}
+        {workout && (
+          <div className="bg-accent/10 rounded-2xl p-6 space-y-4 border border-accent/20">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">{workout.workout_type}</h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ⏱ {workout.duration_minutes}min · 📊 {workout.level}
+                </p>
+              </div>
+              <button
+                onClick={() => toggleWorkout.mutate({ id: workout.id, completed: workout.completed })}
+                className={cn(
+                  "px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                  workout.completed
+                    ? "bg-accent/20 text-accent"
+                    : "bg-primary/20 text-primary hover:bg-primary/30"
+                )}
+              >
+                {workout.completed ? "✓ Completo" : "Marcar como feito"}
+              </button>
+            </div>
 
-        <Section title="💪 Treino principal" delay={160}>
-          {treino.principal.map((e, i) => (
-            <ExercicioRow
-              key={e.nome}
-              nome={e.nome}
-              detalhe={`${e.series} · ${e.descanso} descanso`}
-              feito={e.feito}
-              onToggle={() => toggleExercicio("principal", i)}
-            />
-          ))}
-        </Section>
-
-        <Section title="🧘‍♀️ Finalização" delay={240}>
-          {treino.finalizacao.map((e, i) => (
-            <ExercicioRow
-              key={e.nome}
-              nome={e.nome}
-              detalhe={e.duracao}
-              feito={e.feito}
-              onToggle={() => toggleExercicio("finalizacao", i)}
-            />
-          ))}
-        </Section>
-
-        <div className="space-y-2 animate-fade-up" style={{ animationDelay: "320ms" }}>
-          <Button variant="hero" className="w-full" onClick={handleComplete} disabled={saving}>
-            {saving ? "Salvando..." : "Treino concluído ✅"}
-          </Button>
-          <div className="flex gap-2">
-            <Button variant="hero-outline" className="flex-1 h-12 text-sm" onClick={handleCantToday}>
-              Não consegui hoje
-            </Button>
-            <Button variant="soft" className="flex-1 h-12 text-sm">
-              Adaptar treino
-            </Button>
+            {workout.workout_exercises && workout.workout_exercises.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-accent/20">
+                <p className="text-xs font-medium text-muted-foreground">Exercícios:</p>
+                {workout.workout_exercises.map((ex) => (
+                  <div key={ex.id} className="text-xs text-foreground">
+                    • {ex.exercise_name} {ex.sets && `- ${ex.sets}x${ex.reps}`}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-
-      <BottomNav active={2} />
-    </div>
-  );
-}
-
-function Section({ title, delay, children }: { title: string; delay: number; children: React.ReactNode }) {
-  return (
-    <div className="animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-        {title}
-      </p>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-}
-
-function ExercicioRow({
-  nome,
-  detalhe,
-  feito,
-  onToggle,
-}: {
-  nome: string;
-  detalhe: string;
-  feito: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      onClick={onToggle}
-      className={cn(
-        "w-full flex items-center gap-3 p-3 rounded-xl bg-card card-elevated text-left transition-all active:scale-[0.98]",
-        feito && "opacity-70"
-      )}
-    >
-      <div
-        className={cn(
-          "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-          feito ? "border-accent bg-accent" : "border-border"
         )}
-      >
-        {feito && <Check size={12} className="text-accent-foreground" />}
+
+        {/* Quick Start */}
+        <div className="bg-card card-elevated rounded-2xl p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-foreground">Iniciar treino rápido</h2>
+          
+          <div className="space-y-2">
+            <Label htmlFor="type" className="text-sm font-medium">
+              Tipo de treino
+            </Label>
+            <Select value={workoutType} onValueChange={setWorkoutType}>
+              <SelectTrigger className="h-12 rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {workoutTypes.map(t => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="duration" className="text-sm font-medium">
+              Duração (minutos)
+            </Label>
+            <Input
+              id="duration"
+              type="number"
+              min="1"
+              max="300"
+              value={duration}
+              onChange={(e) => setDuration(parseInt(e.target.value))}
+              className="h-12 rounded-xl"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="level" className="text-sm font-medium">
+              Nível
+            </Label>
+            <Select value={level} onValueChange={setLevel}>
+              <SelectTrigger className="h-12 rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="leve">Leve</SelectItem>
+                <SelectItem value="moderado">Moderado</SelectItem>
+                <SelectItem value="intenso">Intenso</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button variant="hero" className="w-full">
+            <Plus size={16} className="mr-2" />
+            Iniciar treino
+          </Button>
+        </div>
+
+        {/* Tips */}
+        <div className="bg-primary/5 rounded-2xl p-4 space-y-2">
+          <p className="text-sm font-medium text-foreground">💡 Dica</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Realize exercícios regularmente para manter a saúde em dia. Comece aos poucos e vá aumentando a intensidade gradualmente.
+          </p>
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className={cn("text-sm font-medium", feito && "line-through text-muted-foreground")}>
-          {nome}
-        </p>
-        <p className="text-xs text-muted-foreground">{detalhe}</p>
-      </div>
-    </button>
+    </div>
   );
 }

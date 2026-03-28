@@ -1,19 +1,71 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { useCheckIn } from "@/hooks/useDailyData";
 import { BottomNav } from "@/components/BottomNav";
-import { checkInCompleto } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+const checkInCompleto = {
+  campos: [
+    {
+      id: "humor",
+      label: "Como você está se sentindo?",
+      tipo: "emoji",
+      opcoes: [
+        { label: "Ótimo", emoji: "😄" },
+        { label: "Bom", emoji: "🙂" },
+        { label: "Neutro", emoji: "😐" },
+        { label: "Ruim", emoji: "😞" },
+      ],
+    },
+    {
+      id: "energia",
+      label: "Nível de energia",
+      tipo: "slider",
+      labels: ["Baixa", "Média", "Alta"],
+    },
+    {
+      id: "nota",
+      label: "Notas do dia (opcional)",
+      tipo: "text",
+      placeholder: "Como foi seu dia? Algo especial aconteceu?",
+    },
+  ],
+  feedbacks: [
+    {
+      titulo: "Que incrível! 🎉",
+      mensagem: "Você está com uma energia positiva!",
+      recomendacao: "Aproveite este momento para fazer exercícios e consolidar seus hábitos.",
+    },
+    {
+      titulo: "Tudo certo! 👍",
+      mensagem: "Você está no caminho certo.",
+      recomendacao: "Mantenha a consistência e continue se cuidando.",
+    },
+    {
+      titulo: "Cuidado! 💙",
+      mensagem: "Parece que você pode estar precisando de um descanso.",
+      recomendacao: "Descanse adequadamente, durma bem e se hidrate.",
+    },
+  ],
+};
+
 export default function CheckIn() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [respostas, setRespostas] = useState<Record<string, any>>({});
-  const [energyLevel, setEnergyLevel] = useState(3);
+  const { data: checkin, saveCheckIn } = useCheckIn();
+  
+  const [respostas, setRespostas] = useState<Record<string, any>>(
+    checkin ? {
+      humor: checkin.mood,
+      energia: checkin.energy_level,
+      nota: checkin.notes,
+    } : {}
+  );
+  const [energyLevel, setEnergyLevel] = useState(checkin?.energy_level || 3);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -22,30 +74,33 @@ export default function CheckIn() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("daily_checkins").upsert({
-      user_id: user.id,
-      date: new Date().toISOString().split("T")[0],
-      humor: respostas.humor || null,
-      energia: respostas.energia || energyLevel,
-      alimentacao: respostas.alimentacao || null,
-      agua: respostas.agua || null,
-      treino: respostas.treino || null,
-      sono: respostas.sono || null,
-      nota: respostas.nota || null,
-    }, { onConflict: "user_id,date" });
-
-    setSaving(false);
-    if (error) {
-      toast.error("Erro ao salvar check-in");
-    } else {
-      setSaved(true);
-    }
+    
+    saveCheckIn.mutate(
+      {
+        mood: respostas.humor || "neutro",
+        energy_level: energyLevel,
+        notes: respostas.nota || "",
+      },
+      {
+        onSuccess: () => {
+          setSaving(false);
+          setSaved(true);
+        },
+        onError: () => {
+          setSaving(false);
+          toast.error("Erro ao salvar check-in");
+        },
+      }
+    );
   };
 
-  const feedbackIndex = respostas.humor === "Bem" || respostas.humor === "Motivada" ? 0
-    : respostas.humor === "Desanimada" ? 2 : 1;
+  const feedbackIndex =
+    respostas.humor === "Ótimo"
+      ? 0
+      : respostas.humor === "Ruim"
+      ? 2
+      : 1;
   const feedback = checkInCompleto.feedbacks[feedbackIndex];
 
   if (saved) {
@@ -65,9 +120,15 @@ export default function CheckIn() {
             <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1.5">
               Micro recomendação
             </p>
-            <p className="text-sm text-foreground leading-relaxed">{feedback.recomendacao}</p>
+            <p className="text-sm text-foreground leading-relaxed">
+              {feedback.recomendacao}
+            </p>
           </div>
-          <Button variant="hero" className="w-full" onClick={() => navigate("/dashboard")}>
+          <Button
+            variant="hero"
+            className="w-full"
+            onClick={() => navigate("/dashboard")}
+          >
             Voltar para Hoje
           </Button>
         </div>
@@ -116,7 +177,9 @@ export default function CheckIn() {
                     )}
                   >
                     <span className="text-lg">{o.emoji}</span>
-                    <span className="text-[10px] font-medium text-muted-foreground">{o.label}</span>
+                    <span className="text-[10px] font-medium text-muted-foreground">
+                      {o.label}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -145,7 +208,9 @@ export default function CheckIn() {
                 </div>
                 <div className="flex justify-between text-[10px] text-muted-foreground px-1">
                   {campo.labels?.map((l) => (
-                    <span key={l} className="w-10 text-center">{l}</span>
+                    <span key={l} className="w-10 text-center">
+                      {l}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -164,7 +229,12 @@ export default function CheckIn() {
         ))}
 
         <div className="animate-fade-up" style={{ animationDelay: "500ms" }}>
-          <Button variant="hero" className="w-full" onClick={handleSave} disabled={saving}>
+          <Button
+            variant="hero"
+            className="w-full"
+            onClick={handleSave}
+            disabled={saving}
+          >
             {saving ? "Salvando..." : "Salvar check-in 💛"}
           </Button>
         </div>
