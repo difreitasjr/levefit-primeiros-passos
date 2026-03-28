@@ -17,6 +17,7 @@ import {
   Flame,
   Target,
   Plus,
+  ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -214,7 +215,7 @@ export default function Dashboard() {
             </p>
             <ProgressBar value={sleepPercentage} variant="primary" size="sm" className="mt-2" />
             <button
-              onClick={() => navigate("/treino")}
+              onClick={() => navigate("/sono")}
               className="text-xs text-primary font-medium mt-2 flex items-center gap-1"
             >
               <Plus size={12} /> Registrar
