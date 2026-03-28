@@ -2,16 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useMeals, useWater, useSleep, useWorkouts, useCheckIn } from "@/hooks/useDailyData";
 import { BottomNav } from "@/components/BottomNav";
-import {
-  fraseDoDia,
-  refeicoesDoDia,
-  aguaDoDia,
-  sonoDoDia,
-  treinoDoDia,
-  progressoSemanal,
-  checkInRapido,
-} from "@/data/mockData";
 import { ProgressBar } from "@/components/ProgressBar";
 import {
   Droplets,
@@ -24,6 +16,7 @@ import {
   ChevronRight,
   Flame,
   Target,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,10 +32,21 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [todayCheckin, setTodayCheckin] = useState<any>(null);
-  const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Dados reais do banco
+  const mealsQuery = useMeals();
+  const waterQuery = useWater();
+  const sleepQuery = useSleep();
+  const workoutsQuery = useWorkouts();
+  const checkinQuery = useCheckIn();
+
+  const fraseDoDia = [
+    "Cuide perversamente parece corta. Você nega precisei ser direção, os precisos nem consultoria.",
+    "A consistência é a chave para o sucesso!",
+    "Você é mais forte do que pensa.",
+    "Cada dia é uma nova oportunidade.",
+  ];
   const frase = fraseDoDia[Math.floor(Date.now() / 86400000) % fraseDoDia.length];
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
@@ -51,9 +55,8 @@ export default function Dashboard() {
     if (!user) return;
 
     const loadData = async () => {
-      const [profileRes, checkinRes] = await Promise.all([
-        supabase.from("profiles").select("nome, objetivo, meta, peso_atual, onboarding_completed").eq("user_id", user.id).single(),
-        supabase.from("daily_checkins").select("*").eq("user_id", user.id).eq("date", new Date().toISOString().split("T")[0]).maybeSingle(),
+      const [profileRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("user_id", user.id).single(),
       ]);
 
       if (profileRes.data) {
@@ -63,10 +66,6 @@ export default function Dashboard() {
           return;
         }
       }
-      if (checkinRes.data) {
-        setTodayCheckin(checkinRes.data);
-        setSelectedMood(checkinRes.data.humor);
-      }
       setLoading(false);
     };
 
@@ -75,6 +74,25 @@ export default function Dashboard() {
 
   const displayName = profile?.nome || "você";
   const displayMeta = profile?.meta || "Definir sua meta";
+
+  // Calcular dados das refeições
+  const meals = mealsQuery.data || [];
+  const mealsDone = meals.filter((m) => m.completed).length;
+  const mealsTotal = meals.length || 4;
+
+  // Calcular dados da água
+  const waterData = waterQuery.data || {};
+  const waterPercentage = Math.min(100, ((waterData.cups_consumed || 0) / 8) * 100);
+
+  // Calcular dados do sono
+  const sleepData = sleepQuery.data || {};
+  const sleepPercentage = Math.min(100, ((sleepData.hours_slept || 0) / 8) * 100);
+
+  // Dados do treino
+  const workout = workoutsQuery.data;
+
+  // Dados do check-in
+  const checkin = checkinQuery.data;
 
   const atalhos = [
     { icon: Utensils, label: "Alimentação", color: "bg-primary/10 text-primary", path: "/alimentacao" },
@@ -107,7 +125,7 @@ export default function Dashboard() {
             <span className="text-sm font-semibold">{displayName.charAt(0).toUpperCase()}</span>
           </button>
         </div>
-        <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up" style={{ animationDelay: "80ms" }}>
+        <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up">
           <p className="text-sm text-foreground leading-relaxed italic font-display">
             "{frase}"
           </p>
@@ -119,147 +137,128 @@ export default function Dashboard() {
         {/* Meta do dia */}
         <DashCard title="Meta do dia" icon={Target} delay={120}>
           <p className="text-sm font-medium text-foreground">{displayMeta}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Sequência: {progressoSemanal.sequencia} dias 🔥
-          </p>
         </DashCard>
 
         {/* Refeições */}
-        <DashCard title="Refeições" icon={Utensils} delay={160} badge={`${refeicoesDoDia.filter(r => r.feito).length}/${refeicoesDoDia.length}`}>
+        <DashCard 
+          title="Refeições" 
+          icon={Utensils} 
+          delay={160}
+          badge={`${mealsDone}/${mealsTotal}`}
+          onAction={() => navigate("/alimentacao")}
+        >
           <div className="space-y-2.5">
-            {refeicoesDoDia.map((r) => (
-              <div key={r.tipo} className="flex items-start gap-3">
-                <div className={cn(
-                  "w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors",
-                  r.feito ? "border-accent bg-accent" : "border-border"
-                )}>
-                  {r.feito && <Check size={12} className="text-accent-foreground" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className={cn("text-sm font-medium", r.feito && "text-muted-foreground")}>{r.tipo}</p>
-                    <span className="text-xs text-muted-foreground">{r.horario}</span>
+            {meals.length > 0 ? (
+              meals.map((meal) => (
+                <div key={meal.id} className="flex items-start gap-3">
+                  <button
+                    onClick={() => mealsQuery.toggleMeal.mutate({ id: meal.id, completed: meal.completed })}
+                    className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors",
+                      meal.completed ? "border-accent bg-accent" : "border-border"
+                    )}
+                  >
+                    {meal.completed && <Check size={12} className="text-accent-foreground" />}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("text-sm font-medium", meal.completed && "text-muted-foreground")}>
+                      {meal.meal_type}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{meal.description}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{r.descricao}</p>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">Nenhuma refeição registrada</p>
+            )}
+            <button
+              onClick={() => navigate("/alimentacao")}
+              className="text-xs text-primary font-medium mt-2 flex items-center gap-1"
+            >
+              <Plus size={14} /> Adicionar refeição
+            </button>
           </div>
         </DashCard>
 
         {/* Água e Sono */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
+          <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up">
             <div className="flex items-center gap-2 mb-3">
               <Droplets size={16} className="text-accent" />
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Água</span>
             </div>
             <p className="text-2xl font-semibold text-foreground tabular-nums">
-              {(aguaDoDia.consumido / 1000).toFixed(1)}
-              <span className="text-sm font-normal text-muted-foreground">/{(aguaDoDia.meta / 1000).toFixed(1)}L</span>
+              {waterData.cups_consumed || 0}
+              <span className="text-sm font-normal text-muted-foreground">/8 copos</span>
             </p>
-            <ProgressBar value={aguaDoDia.consumido} max={aguaDoDia.meta} variant="accent" size="sm" className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1.5">{aguaDoDia.copos}/{aguaDoDia.metaCopos} copos</p>
+            <ProgressBar value={waterPercentage} variant="accent" size="sm" className="mt-2" />
+            <button
+              onClick={() => {
+                const newCups = (waterData.cups_consumed || 0) + 1;
+                waterQuery.addWater.mutate(newCups);
+              }}
+              className="text-xs text-primary font-medium mt-2 flex items-center gap-1"
+            >
+              <Plus size={12} /> Adicionar
+            </button>
           </div>
 
-          <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up" style={{ animationDelay: "240ms" }}>
+          <div className="bg-card card-elevated rounded-2xl p-4 animate-fade-up">
             <div className="flex items-center gap-2 mb-3">
               <Moon size={16} className="text-primary" />
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sono</span>
             </div>
             <p className="text-2xl font-semibold text-foreground tabular-nums">
-              {sonoDoDia.horasDormidas}
-              <span className="text-sm font-normal text-muted-foreground">/{sonoDoDia.metaHoras}h</span>
+              {sleepData.hours_slept || 0}
+              <span className="text-sm font-normal text-muted-foreground">/8h</span>
             </p>
-            <ProgressBar value={sonoDoDia.horasDormidas} max={sonoDoDia.metaHoras} variant="primary" size="sm" className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1.5">{sonoDoDia.qualidade}</p>
+            <ProgressBar value={sleepPercentage} variant="primary" size="sm" className="mt-2" />
+            <button
+              onClick={() => navigate("/treino")}
+              className="text-xs text-primary font-medium mt-2 flex items-center gap-1"
+            >
+              <Plus size={12} /> Registrar
+            </button>
           </div>
         </div>
 
         {/* Treino */}
-        <DashCard title="Treino de hoje" icon={Dumbbell} delay={280}>
-          <p className="text-sm font-medium text-foreground">{treinoDoDia.tipo}</p>
-          <div className="flex items-center gap-3 mt-1.5">
-            <span className="text-xs text-muted-foreground">⏱ {treinoDoDia.duracao}</span>
-            <span className="text-xs text-muted-foreground">📊 {treinoDoDia.nivel}</span>
-          </div>
-          <div className="mt-3 space-y-2">
-            {treinoDoDia.exercicios.slice(0, 3).map((e) => (
-              <div key={e.nome} className="flex items-center justify-between text-xs">
-                <span className="text-foreground">{e.nome}</span>
-                <span className="text-muted-foreground">{e.series}</span>
-              </div>
-            ))}
-            {treinoDoDia.exercicios.length > 3 && (
-              <p className="text-xs text-primary font-medium">+{treinoDoDia.exercicios.length - 3} exercícios</p>
-            )}
-          </div>
-        </DashCard>
+        {workout && (
+          <DashCard title="Treino de hoje" icon={Dumbbell} delay={280}>
+            <p className="text-sm font-medium text-foreground">{workout.workout_type}</p>
+            <div className="flex items-center gap-3 mt-1.5">
+              <span className="text-xs text-muted-foreground">⏱ {workout.duration_minutes || 0}min</span>
+              <span className="text-xs text-muted-foreground">📊 {workout.level || "Não definido"}</span>
+            </div>
+            <button
+              onClick={() => workoutsQuery.toggleWorkout.mutate({ id: workout.id, completed: workout.completed })}
+              className={cn(
+                "mt-3 w-full py-2 rounded-lg text-sm font-medium transition-colors",
+                workout.completed
+                  ? "bg-accent/20 text-accent"
+                  : "bg-primary/20 text-primary hover:bg-primary/30"
+              )}
+            >
+              {workout.completed ? "✓ Treino completo" : "Marcar como feito"}
+            </button>
+          </DashCard>
+        )}
 
         {/* Check-in */}
         <button onClick={() => navigate("/checkin")} className="w-full text-left">
-          <DashCard title={todayCheckin ? "Check-in feito ✅" : "Como você está hoje?"} icon={Sparkles} delay={320}>
-            {todayCheckin ? (
+          <DashCard title={checkin ? "Check-in feito ✅" : "Como você está hoje?"} icon={Sparkles} delay={320}>
+            {checkin ? (
               <p className="text-sm text-muted-foreground">
-                Humor: {todayCheckin.humor || "—"} · Energia: {todayCheckin.energia || "—"}/5
+                Humor: {checkin.mood || "—"} · Energia: {checkin.energy_level || "—"}/5
               </p>
             ) : (
-              <>
-                <div className="flex justify-between">
-                  {checkInRapido.opcoes.map((o) => (
-                    <div
-                      key={o.label}
-                      className={cn(
-                        "flex flex-col items-center gap-1 px-2 py-2 rounded-xl transition-all",
-                        selectedMood === o.label ? "bg-primary/10" : ""
-                      )}
-                    >
-                      <span className="text-xl">{o.emoji}</span>
-                      <span className="text-[10px] text-muted-foreground font-medium">{o.label}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-primary font-medium mt-2">Fazer check-in completo →</p>
-              </>
+              <p className="text-xs text-primary font-medium">Fazer check-in →</p>
             )}
           </DashCard>
         </button>
 
-        {/* Progresso semanal */}
-        <DashCard title="Progresso da semana" icon={Flame} delay={360}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-foreground">
-              <span className="font-semibold">{progressoSemanal.diasCompletos}</span>
-              <span className="text-muted-foreground">/{progressoSemanal.totalDias} dias</span>
-            </p>
-            <span className="text-xs text-accent font-semibold">
-              {profile?.peso_atual && progressoSemanal.pesoInicio > (profile.peso_atual || 0) ? "-" : "+"}
-              {Math.abs(progressoSemanal.pesoInicio - (profile?.peso_atual || progressoSemanal.pesoAtual)).toFixed(1)}kg
-            </span>
-          </div>
-          <div className="space-y-2.5">
-            {Object.entries(progressoSemanal.tarefas).map(([key, val]) => {
-              const labels: Record<string, string> = {
-                alimentacao: "Alimentação",
-                agua: "Água",
-                treino: "Treino",
-                sono: "Sono",
-              };
-              return (
-                <div key={key} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-foreground font-medium">{labels[key]}</span>
-                    <span className="text-muted-foreground tabular-nums">{val}%</span>
-                  </div>
-                  <ProgressBar value={val} variant={val >= 80 ? "accent" : val >= 60 ? "primary" : "terracotta"} size="sm" />
-                </div>
-              );
-            })}
-          </div>
-        </DashCard>
-
         {/* Atalhos */}
-        <div className="grid grid-cols-4 gap-2 animate-fade-up" style={{ animationDelay: "400ms" }}>
+        <div className="grid grid-cols-4 gap-2 animate-fade-up">
           {atalhos.map((a) => (
             <button
               key={a.label}
@@ -285,17 +284,20 @@ function DashCard({
   icon: Icon,
   badge,
   delay = 0,
+  onAction,
   children,
 }: {
   title: string;
   icon: React.ElementType;
   badge?: string;
   delay?: number;
+  onAction?: () => void;
   children: React.ReactNode;
 }) {
   return (
     <div
-      className="bg-card card-elevated rounded-2xl p-4 animate-fade-up"
+      className="bg-card card-elevated rounded-2xl p-4 animate-fade-up cursor-pointer hover:shadow-md transition-shadow"
+      onClick={onAction}
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center justify-between mb-3">
