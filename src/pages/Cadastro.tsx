@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,10 +13,12 @@ function Cadastro() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
 
   const handleSignUp = async () => {
-    if (!email || !password || !confirmPassword) {
-      setError('Preencha todos os campos')
+    // Validações
+    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+      setError('Por favor, preencha todos os campos')
       return
     }
 
@@ -30,17 +32,26 @@ function Cadastro() {
       return
     }
 
+    if (!email.includes('@')) {
+      setError('Email inválido')
+      return
+    }
+
     setLoading(true)
     setError('')
+    setSuccess(false)
 
     try {
+      console.log('Iniciando cadastro para:', email)
+
       // 1. Criar usuário no Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
       })
 
       if (authError) {
+        console.error('Erro de autenticação:', authError)
         setError(`Erro ao criar conta: ${authError.message}`)
         setLoading(false)
         return
@@ -52,7 +63,12 @@ function Cadastro() {
         return
       }
 
-      // 2. Criar registro na tabela profiles
+      console.log('Usuário criado:', authData.user.id)
+
+      // 2. Aguardar sincronização (importante!)
+      await new Promise(resolve => setTimeout(resolve, 1500))
+
+      // 3. Criar registro na tabela profiles com o contexto correto
       const { error: profileError } = await supabase
         .from('profiles')
         .insert([
@@ -65,24 +81,40 @@ function Cadastro() {
         ])
 
       if (profileError) {
+        console.error('Erro ao criar perfil:', profileError)
         setError(`Erro ao criar perfil: ${profileError.message}`)
         setLoading(false)
         return
       }
 
-      // 3. Redirecionar para login
-      alert('Conta criada com sucesso! Faça login agora.')
-      navigate('/login')
+      console.log('Perfil criado com sucesso!')
+      setSuccess(true)
+      setEmail('')
+      setPassword('')
+      setConfirmPassword('')
+
+      // 4. Redirecionar após 2 segundos
+      setTimeout(() => {
+        navigate('/login')
+      }, 2000)
     } catch (err: any) {
+      console.error('Erro geral:', err)
       setError(`Erro: ${err.message || 'Algo deu errado'}`)
     } finally {
       setLoading(false)
     }
   }
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !loading) {
+      handleSignUp()
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <Sparkles className="w-8 h-8 text-green-600" />
@@ -91,13 +123,24 @@ function Cadastro() {
           <p className="text-gray-600">Junte-se ao LeveFit!</p>
         </div>
 
+        {/* Card */}
         <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
+          {/* Mensagem de Sucesso */}
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded flex items-center gap-2">
+              <span>✓</span>
+              <span>Conta criada com sucesso! Redirecionando...</span>
+            </div>
+          )}
+
+          {/* Mensagem de Erro */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
               {error}
             </div>
           )}
 
+          {/* Campo Email */}
           <div className="space-y-2">
             <Label htmlFor="email" className="text-gray-700 font-medium">
               Email
@@ -108,11 +151,14 @@ function Cadastro() {
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              className="border-gray-300"
+              onKeyPress={handleKeyPress}
+              disabled={loading || success}
+              className="border-gray-300 focus:border-green-500 focus:ring-green-500"
             />
+            <p className="text-xs text-gray-500">Você receberá um email de confirmação</p>
           </div>
 
+          {/* Campo Senha */}
           <div className="space-y-2">
             <Label htmlFor="password" className="text-gray-700 font-medium">
               Senha
@@ -123,11 +169,13 @@ function Cadastro() {
               placeholder="Mínimo 6 caracteres"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              className="border-gray-300"
+              onKeyPress={handleKeyPress}
+              disabled={loading || success}
+              className="border-gray-300 focus:border-green-500 focus:ring-green-500"
             />
           </div>
 
+          {/* Campo Confirmar Senha */}
           <div className="space-y-2">
             <Label htmlFor="confirmPassword" className="text-gray-700 font-medium">
               Confirmar Senha
@@ -138,29 +186,60 @@ function Cadastro() {
               placeholder="Confirme sua senha"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={loading}
-              className="border-gray-300"
+              onKeyPress={handleKeyPress}
+              disabled={loading || success}
+              className="border-gray-300 focus:border-green-500 focus:ring-green-500"
             />
           </div>
 
+          {/* Botão Criar Conta */}
           <Button
             onClick={handleSignUp}
-            disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+            disabled={loading || success || !email || !password || !confirmPassword}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50"
           >
-            {loading ? 'Criando conta...' : 'Criar Conta'}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin">⏳</span>
+                Criando conta...
+              </span>
+            ) : success ? (
+              <span className="flex items-center gap-2">
+                <span>✓</span>
+                Conta criada!
+              </span>
+            ) : (
+              'Criar Conta'
+            )}
           </Button>
 
-          <p className="text-center text-sm text-gray-600">
-            Já tem conta?{' '}
-            <button
-              onClick={() => navigate('/login')}
-              className="text-green-600 font-medium hover:underline"
-            >
-              Faça login
-            </button>
-          </p>
+          {/* Link para Login */}
+          <div className="text-center space-y-2">
+            <p className="text-sm text-gray-600">
+              Já tem conta?{' '}
+              <Link
+                to="/login"
+                className="text-green-600 font-medium hover:underline"
+              >
+                Faça login
+              </Link>
+            </p>
+            <p className="text-sm text-gray-600">
+              <Link
+                to="/"
+                className="text-green-600 font-medium hover:underline"
+              >
+                Voltar para home
+              </Link>
+            </p>
+          </div>
         </div>
+
+        {/* Termos */}
+        <p className="text-center text-xs text-gray-500 mt-6">
+          Ao criar uma conta, você concorda com nossos{' '}
+          <button className="text-green-600 hover:underline">Termos de Serviço</button>
+        </p>
       </div>
     </div>
   )
