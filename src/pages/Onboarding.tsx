@@ -11,99 +11,115 @@ import { Sparkles } from 'lucide-react'
 function Onboarding() {
   const navigate = useNavigate()
   const { user } = useAuth()
-
   const [nome, setNome] = useState('')
   const [objetivo, setObjetivo] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  async function finalizarOnboarding() {
-    if (!nome || !objetivo) return
+  const finalizarOnboarding = async () => {
+    if (!nome.trim() || !objetivo) {
+      setError('Por favor, preencha todos os campos')
+      return
+    }
+
+    if (!user) {
+      setError('Usuário não autenticado')
+      console.error('Usuário não encontrado')
+      return
+    }
+
     setLoading(true)
+    setError('')
 
     try {
-      if (user) {
-        await supabase.from('profiles').upsert([{
-          user_id: user.id,
-          nome,
-          objetivo,
-          onboarding_completed: true,
-        }], { onConflict: 'user_id' })
+      console.log('Salvando onboarding para usuário:', user.id)
 
-        await supabase.from('onboarding_answers').upsert([{
-          user_id: user.id,
-          answers: { nome, objetivo },
-        }], { onConflict: 'user_id' })
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            user_id: user.id,
+            nome: nome.trim(),
+            objetivo,
+            onboarding_completed: true,
+          },
+          { onConflict: 'user_id' }
+        )
+
+      if (profileError) {
+        console.error('Erro ao salvar profile:', profileError)
+        setError(`Erro ao salvar perfil: ${profileError.message}`)
+        setLoading(false)
+        return
       }
 
+      console.log('Perfil salvo com sucesso!')
+      setLoading(false)
       navigate('/dashboard')
-    } catch (err) {
-      console.error('Erro ao salvar onboarding:', err)
-    } finally {
+    } catch (err: any) {
+      console.error('Erro geral ao salvar onboarding:', err)
+      setError(`Erro: ${err.message || 'Algo deu errado'}`)
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-6">
-      <div className="w-full max-w-md animate-fade-up">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-5">
-            <Sparkles className="w-7 h-7 text-primary" />
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center mb-4">
+            <Sparkles className="w-8 h-8 text-green-600" />
           </div>
-          <h1 className="font-display text-3xl font-semibold text-foreground mb-2">
-            Vamos começar!
-          </h1>
-          <p className="text-muted-foreground text-base">
-            Me conta um pouco sobre você para personalizar sua experiência
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Bem-vindo ao LeveFit!</h1>
+          <p className="text-gray-600">Vamos personalizar sua jornada</p>
         </div>
 
-        {/* Form */}
-        <div className="space-y-5">
+        <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label htmlFor="nome" className="text-sm font-medium text-foreground">
-              Como posso te chamar?
+            <Label htmlFor="nome" className="text-gray-700 font-medium">
+              Como você gostaria de ser chamado?
             </Label>
             <Input
               id="nome"
               type="text"
-              placeholder="Seu nome"
+              placeholder="Digite seu nome"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              className="h-12 rounded-xl bg-card border-border"
+              disabled={loading}
+              className="border-gray-300"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="objetivo" className="text-sm font-medium text-foreground">
-              Qual seu objetivo principal?
+            <Label htmlFor="objetivo" className="text-gray-700 font-medium">
+              Qual é seu objetivo?
             </Label>
-            <Select value={objetivo} onValueChange={setObjetivo}>
-              <SelectTrigger className="h-12 rounded-xl bg-card border-border">
+            <Select value={objetivo} onValueChange={setObjetivo} disabled={loading}>
+              <SelectTrigger id="objetivo" className="border-gray-300">
                 <SelectValue placeholder="Selecione seu objetivo" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Emagrecer">Emagrecer</SelectItem>
-                <SelectItem value="Manter">Manter o peso</SelectItem>
-                <SelectItem value="Ganhar massa">Ganhar massa</SelectItem>
+                <SelectItem value="Manter">Manter peso</SelectItem>
+                <SelectItem value="Ganhar massa">Ganhar massa muscular</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <Button
-            variant="hero"
-            className="w-full mt-4"
             onClick={finalizarOnboarding}
-            disabled={!nome || !objetivo || loading}
+            disabled={loading || !nome.trim() || !objetivo}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
           >
             {loading ? 'Salvando...' : 'Começar minha jornada ✨'}
           </Button>
         </div>
-
-        <p className="text-center text-xs text-muted-foreground mt-8">
-          Você pode alterar essas informações depois no seu perfil
-        </p>
       </div>
     </div>
   )
