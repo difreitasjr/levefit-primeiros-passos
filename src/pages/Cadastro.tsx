@@ -42,34 +42,52 @@ function Cadastro() {
     setSuccess(false)
 
     try {
-      console.log('Iniciando cadastro para:', email)
+      console.log('=== INICIANDO CADASTRO ===')
+      console.log('Email:', email)
 
       // 1. Criar usuário no Supabase Auth
+      console.log('Passo 1: Criando usuário no Auth...')
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       })
 
       if (authError) {
-        console.error('Erro de autenticação:', authError)
+        console.error('❌ Erro de autenticação:', {
+          message: authError.message,
+          code: authError.code,
+          status: authError.status,
+        })
         setError(`Erro ao criar conta: ${authError.message}`)
         setLoading(false)
         return
       }
 
       if (!authData.user) {
+        console.error('❌ Usuário não retornou do signup')
         setError('Erro ao criar usuário')
         setLoading(false)
         return
       }
 
-      console.log('Usuário criado:', authData.user.id)
+      console.log('✅ Usuário criado com sucesso!')
+      console.log('User ID:', authData.user.id)
+      console.log('User Email:', authData.user.email)
 
-      // 2. Aguardar sincronização (importante!)
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // 2. Aguardar sincronização
+      console.log('Passo 2: Aguardando sincronização (2 segundos)...')
+      await new Promise(resolve => setTimeout(resolve, 2000))
 
-      // 3. Criar registro na tabela profiles com o contexto correto
-      const { error: profileError } = await supabase
+      // 3. Criar registro na tabela profiles
+      console.log('Passo 3: Criando registro em profiles...')
+      console.log('Dados a inserir:', {
+        user_id: authData.user.id,
+        nome: null,
+        objetivo: null,
+        onboarding_completed: false,
+      })
+
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert([
           {
@@ -79,26 +97,42 @@ function Cadastro() {
             onboarding_completed: false,
           },
         ])
+        .select()
 
       if (profileError) {
-        console.error('Erro ao criar perfil:', profileError)
+        console.error('❌ ERRO AO CRIAR PERFIL:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+          status: (profileError as any).status,
+        })
         setError(`Erro ao criar perfil: ${profileError.message}`)
         setLoading(false)
         return
       }
 
-      console.log('Perfil criado com sucesso!')
+      console.log('✅ Perfil criado com sucesso!')
+      console.log('Profile data:', profileData)
+
       setSuccess(true)
       setEmail('')
       setPassword('')
       setConfirmPassword('')
 
+      console.log('Redirecionando para login em 2 segundos...')
+
       // 4. Redirecionar após 2 segundos
       setTimeout(() => {
+        console.log('Navegando para /login')
         navigate('/login')
       }, 2000)
     } catch (err: any) {
-      console.error('Erro geral:', err)
+      console.error('❌ ERRO GERAL:', {
+        message: err.message,
+        name: err.name,
+        stack: err.stack,
+      })
       setError(`Erro: ${err.message || 'Algo deu errado'}`)
     } finally {
       setLoading(false)
