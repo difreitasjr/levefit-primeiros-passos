@@ -14,10 +14,8 @@ import {
   Sparkles,
   Check,
   ChevronRight,
-  Flame,
   Target,
   Plus,
-  ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,56 +41,64 @@ export default function Dashboard() {
   const checkinQuery = useCheckIn();
 
   const fraseDoDia = [
-    "Cuide perversamente parece corta. Você nega precisei ser direção, os precisos nem consultoria.",
     "A consistência é a chave para o sucesso!",
     "Você é mais forte do que pensa.",
     "Cada dia é uma nova oportunidade.",
+    "Pequenos passos levam a grandes resultados!",
   ];
   const frase = fraseDoDia[Math.floor(Date.now() / 86400000) % fraseDoDia.length];
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
 
   useEffect(() => {
-  if (!user) return;
-
-  const loadData = async () => {
-    try {
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (profileError && profileError.code !== "PGRST116") {
-        console.error("Erro ao carregar profile:", profileError);
-        setLoading(false);
-        return;
-      }
-
-      if (!profileData) {
-        // Profile não existe, redireciona para onboarding
-        navigate("/onboarding");
-        return;
-      }
-
-      setProfile(profileData);
-
-      // Verifica se onboarding foi completado
-      if (profileData.onboarding_completed === false || profileData.onboarding_completed === null) {
-        navigate("/onboarding");
-        return;
-      }
-
-      setLoading(false);
-    } catch (error) {
-      console.error("Erro geral:", error);
-      setLoading(false);
+    if (!user) {
+      navigate("/login");
+      return;
     }
-  };
 
-  loadData();
-}, [user, navigate]);
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        console.log("Carregando dados do usuário:", user.id);
 
+        // Busca o perfil
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profileError && profileError.code !== "PGRST116") {
+          console.error("Erro ao carregar profile:", profileError);
+          setLoading(false);
+          return;
+        }
+
+        // Se não existe perfil, vai para onboarding
+        if (!profileData) {
+          console.log("Perfil não encontrado, redirecionando para onboarding");
+          navigate("/onboarding");
+          return;
+        }
+
+        // Se onboarding não foi completado, vai para onboarding
+        if (!profileData.onboarding_completed) {
+          console.log("Onboarding não completado, redirecionando");
+          navigate("/onboarding");
+          return;
+        }
+
+        console.log("Perfil carregado com sucesso:", profileData);
+        setProfile(profileData);
+        setLoading(false);
+      } catch (error: any) {
+        console.error("Erro geral ao carregar dashboard:", error);
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user, navigate]);
 
   const displayName = profile?.nome || "você";
   const displayMeta = profile?.meta || "Definir sua meta";
@@ -174,7 +180,10 @@ export default function Dashboard() {
               meals.map((meal) => (
                 <div key={meal.id} className="flex items-start gap-3">
                   <button
-                    onClick={() => mealsQuery.toggleMeal.mutate({ id: meal.id, completed: meal.completed })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      mealsQuery.toggleMeal.mutate({ id: meal.id, completed: !meal.completed });
+                    }}
                     className={cn(
                       "w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 transition-colors",
                       meal.completed ? "border-accent bg-accent" : "border-border"
@@ -183,7 +192,7 @@ export default function Dashboard() {
                     {meal.completed && <Check size={12} className="text-accent-foreground" />}
                   </button>
                   <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm font-medium", meal.completed && "text-muted-foreground")}>
+                    <p className={cn("text-sm font-medium", meal.completed && "text-muted-foreground line-through")}>
                       {meal.meal_type}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{meal.description}</p>
@@ -194,8 +203,11 @@ export default function Dashboard() {
               <p className="text-sm text-muted-foreground">Nenhuma refeição registrada</p>
             )}
             <button
-              onClick={() => navigate("/alimentacao")}
-              className="text-xs text-primary font-medium mt-2 flex items-center gap-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate("/alimentacao");
+              }}
+              className="text-xs text-primary font-medium mt-2 flex items-center gap-1 hover:underline"
             >
               <Plus size={14} /> Adicionar refeição
             </button>
@@ -211,15 +223,15 @@ export default function Dashboard() {
             </div>
             <p className="text-2xl font-semibold text-foreground tabular-nums">
               {waterData.cups_consumed || 0}
-              <span className="text-sm font-normal text-muted-foreground">/8 copos</span>
+              <span className="text-sm font-normal text-muted-foreground">/8</span>
             </p>
             <ProgressBar value={waterPercentage} variant="accent" size="sm" className="mt-2" />
             <button
               onClick={() => {
-                const newCups = (waterData.cups_consumed || 0) + 1;
+                const newCups = Math.min(8, (waterData.cups_consumed || 0) + 1);
                 waterQuery.addWater.mutate(newCups);
               }}
-              className="text-xs text-primary font-medium mt-2 flex items-center gap-1"
+              className="text-xs text-primary font-medium mt-2 flex items-center gap-1 hover:underline"
             >
               <Plus size={12} /> Adicionar
             </button>
@@ -237,7 +249,7 @@ export default function Dashboard() {
             <ProgressBar value={sleepPercentage} variant="primary" size="sm" className="mt-2" />
             <button
               onClick={() => navigate("/sono")}
-              className="text-xs text-primary font-medium mt-2 flex items-center gap-1"
+              className="text-xs text-primary font-medium mt-2 flex items-center gap-1 hover:underline"
             >
               <Plus size={12} /> Registrar
             </button>
@@ -253,7 +265,10 @@ export default function Dashboard() {
               <span className="text-xs text-muted-foreground">📊 {workout.level || "Não definido"}</span>
             </div>
             <button
-              onClick={() => workoutsQuery.toggleWorkout.mutate({ id: workout.id, completed: workout.completed })}
+              onClick={(e) => {
+                e.stopPropagation();
+                workoutsQuery.toggleWorkout.mutate({ id: workout.id, completed: !workout.completed });
+              }}
               className={cn(
                 "mt-3 w-full py-2 rounded-lg text-sm font-medium transition-colors",
                 workout.completed
@@ -268,7 +283,11 @@ export default function Dashboard() {
 
         {/* Check-in */}
         <button onClick={() => navigate("/checkin")} className="w-full text-left">
-          <DashCard title={checkin ? "Check-in feito ✅" : "Como você está hoje?"} icon={Sparkles} delay={320}>
+          <DashCard 
+            title={checkin ? "Check-in feito ✅" : "Como você está hoje?"} 
+            icon={Sparkles} 
+            delay={320}
+          >
             {checkin ? (
               <p className="text-sm text-muted-foreground">
                 Humor: {checkin.mood || "—"} · Energia: {checkin.energy_level || "—"}/5
@@ -285,12 +304,12 @@ export default function Dashboard() {
             <button
               key={a.label}
               onClick={() => navigate(a.path)}
-              className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-card card-elevated transition-all active:scale-95"
+              className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl bg-card card-elevated transition-all active:scale-95 hover:shadow-md"
             >
               <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", a.color)}>
                 <a.icon size={18} strokeWidth={1.8} />
               </div>
-              <span className="text-[10px] font-medium text-muted-foreground">{a.label}</span>
+              <span className="text-[10px] font-medium text-muted-foreground text-center line-clamp-1">{a.label}</span>
             </button>
           ))}
         </div>
@@ -318,7 +337,7 @@ function DashCard({
 }) {
   return (
     <div
-      className="bg-card card-elevated rounded-2xl p-4 animate-fade-up cursor-pointer hover:shadow-md transition-shadow"
+      className="bg-card card-elevated rounded-2xl p-4 animate-fade-up hover:shadow-md transition-shadow cursor-pointer"
       onClick={onAction}
       style={{ animationDelay: `${delay}ms` }}
     >
@@ -327,10 +346,12 @@ function DashCard({
           <Icon size={16} className="text-primary" />
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</span>
         </div>
-        {badge && (
-          <span className="text-xs font-semibold text-primary bg-primary/8 px-2 py-0.5 rounded-full">{badge}</span>
-        )}
-        <ChevronRight size={16} className="text-muted-foreground/50" />
+        <div className="flex items-center gap-2">
+          {badge && (
+            <span className="text-xs font-semibold text-primary bg-primary/8 px-2 py-0.5 rounded-full">{badge}</span>
+          )}
+          <ChevronRight size={16} className="text-muted-foreground/50" />
+        </div>
       </div>
       {children}
     </div>
