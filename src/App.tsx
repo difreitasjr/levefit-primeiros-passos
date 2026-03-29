@@ -12,6 +12,7 @@ import Desafios from './pages/Desafios'
 import Perfil from './pages/Perfil'
 import ResetPassword from './pages/ResetPassword'
 import NotFound from './pages/NotFound'
+import Sono from './pages/Sono'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
       <Route path="/treino" element={<Treino />} />
       <Route path="/progresso" element={<Progresso />} />
       <Route path="/checkin" element={<CheckIn />} />
+      <Route path="/sono" element={<Sono />} />
       <Route path="/desafios" element={<Desafios />} />
       <Route path="/perfil" element={<Perfil />} />
       <Route path="*" element={<NotFound />} />
