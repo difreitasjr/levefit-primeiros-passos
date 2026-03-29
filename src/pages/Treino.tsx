@@ -130,10 +130,20 @@ export default function Treino() {
             </Select>
           </div>
 
-          <Button variant="hero" className="w-full">
-            <Plus size={16} className="mr-2" />
-            Iniciar treino
-          </Button>
+          <Button 
+  variant="hero" 
+  className="w-full"
+  onClick={() => {
+    // Aqui vamos salvar o treino
+    console.log("Iniciando treino:", { workoutType, duration, level });
+    // Por enquanto só mostra no console
+    alert("Treino iniciado! (Em desenvolvimento)");
+  }}
+>
+  <Plus size={16} className="mr-2" />
+  Iniciar treino
+</Button>
+
         </div>
 
         {/* Tips */}
