@@ -53,25 +53,46 @@ export default function Dashboard() {
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
 
   useEffect(() => {
-    if (!user) return;
+  if (!user) return;
 
-    const loadData = async () => {
-      const [profileRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("user_id", user.id).single(),
-      ]);
+  const loadData = async () => {
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
 
-      if (profileRes.data) {
-        setProfile(profileRes.data);
-        if (!profileRes.data.onboarding_completed) {
-          navigate("/onboarding");
-          return;
-        }
+      if (profileError && profileError.code !== "PGRST116") {
+        console.error("Erro ao carregar profile:", profileError);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    };
 
-    loadData();
-  }, [user, navigate]);
+      if (!profileData) {
+        // Profile não existe, redireciona para onboarding
+        navigate("/onboarding");
+        return;
+      }
+
+      setProfile(profileData);
+
+      // Verifica se onboarding foi completado
+      if (profileData.onboarding_completed === false || profileData.onboarding_completed === null) {
+        navigate("/onboarding");
+        return;
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Erro geral:", error);
+      setLoading(false);
+    }
+  };
+
+  loadData();
+}, [user, navigate]);
+
 
   const displayName = profile?.nome || "você";
   const displayMeta = profile?.meta || "Definir sua meta";
