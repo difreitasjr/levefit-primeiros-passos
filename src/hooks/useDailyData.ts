@@ -69,15 +69,15 @@ export function useWater() {
   const query = useQuery({
     queryKey: ['water', user?.id, today],
     queryFn: async () => {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('daily_water')
         .select('*')
         .eq('user_id', user?.id)
         .eq('date', today)
         .maybeSingle();
-      
+
       if (error && error.code !== 'PGRST116') throw error;
-      
+
       return data || { cups_consumed: 0, liters_consumed: 0 };
     },
     enabled: !!user?.id,
@@ -85,18 +85,35 @@ export function useWater() {
 
   const addWater = useMutation({
     mutationFn: async (cups: number) => {
-      const liters = cups * 0.25;
-      
-      const { error } = await supabase
+      const liters = parseFloat((cups * 0.25).toFixed(2));
+
+      // Tenta buscar registro existente
+      const { data: existing } = await supabase
         .from('daily_water')
-        .upsert({
-          user_id: user?.id,
-          date: today,
-          cups_consumed: cups,
-          liters_consumed: liters,
-        }, { onConflict: 'user_id, date' });
-      
-      if (error) throw error;
+        .select('id')
+        .eq('user_id', user?.id)
+        .eq('date', today)
+        .maybeSingle();
+
+      if (existing?.id) {
+        // Atualiza se já existe
+        const { error } = await supabase
+          .from('daily_water')
+          .update({ cups_consumed: cups, liters_consumed: liters })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        // Insere se não existe
+        const { error } = await supabase
+          .from('daily_water')
+          .insert({
+            user_id: user?.id,
+            date: today,
+            cups_consumed: cups,
+            liters_consumed: liters,
+          });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['water'] });
@@ -105,6 +122,7 @@ export function useWater() {
 
   return { ...query, addWater };
 }
+
 
 // ===== SLEEP =====
 export function useSleep() {
