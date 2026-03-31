@@ -3,6 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,6 +21,7 @@ import {
   Calendar,
   LogOut,
   Heart,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -22,12 +31,20 @@ export default function Perfil() {
   const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [lembretes, setLembretes] = useState({
     treino: true,
     agua: true,
     refeicao: true,
     sono: true,
   });
+
+  // Estado do modal de edição
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingLabel, setEditingLabel] = useState("");
+  const [editingField, setEditingField] = useState("");
+  const [editingValue, setEditingValue] = useState("");
+  const [editingType, setEditingType] = useState<"text" | "number">("text");
 
   useEffect(() => {
     if (!user) return;
@@ -37,13 +54,68 @@ export default function Perfil() {
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
-        if (data) setProfile(data);
+        if (data) {
+          setProfile(data);
+          setLembretes({
+            treino: data.lembrete_treino ?? true,
+            agua: data.lembrete_agua ?? true,
+            refeicao: data.lembrete_refeicao ?? true,
+            sono: data.lembrete_sono ?? true,
+          });
+        }
         setLoading(false);
       });
   }, [user]);
 
-  const toggleLembrete = (key: keyof typeof lembretes) => {
-    setLembretes((prev) => ({ ...prev, [key]: !prev[key] }));
+  const openEdit = (label: string, field: string, value: any, type: "text" | "number" = "text") => {
+    setEditingLabel(label);
+    setEditingField(field);
+    setEditingValue(value ?? "");
+    setEditingType(type);
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+
+    const valorFinal = editingType === "number"
+      ? editingValue === "" ? null : Number(editingValue)
+      : editingValue;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ [editingField]: valorFinal })
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast.error("Erro ao salvar. Tente novamente.");
+    } else {
+      setProfile((prev: any) => ({ ...prev, [editingField]: valorFinal }));
+      toast.success(`${editingLabel} atualizado com sucesso!`);
+      setModalOpen(false);
+    }
+    setSaving(false);
+  };
+
+  const toggleLembrete = async (key: keyof typeof lembretes) => {
+    if (!user) return;
+    const novoValor = !lembretes[key];
+    setLembretes((prev) => ({ ...prev, [key]: novoValor }));
+
+    const coluna = `lembrete_${key}`;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ [coluna]: novoValor })
+      .eq("user_id", user.id);
+
+    if (error) {
+      // Reverte se der erro
+      setLembretes((prev) => ({ ...prev, [key]: !novoValor }));
+      toast.error("Erro ao salvar preferência.");
+    } else {
+      toast.success(`Lembrete de ${key} ${novoValor ? "ativado" : "desativado"}!`);
+    }
   };
 
   const handleLogout = async () => {
@@ -65,36 +137,36 @@ export default function Perfil() {
     {
       titulo: "Dados pessoais",
       items: [
-        { label: "Nome", value: p.nome || "—", icon: User },
-        { label: "Idade", value: p.idade ? `${p.idade} anos` : "—", icon: User },
-        { label: "Peso atual", value: p.peso_atual ? `${p.peso_atual}kg` : "—", icon: User },
-        { label: "Altura", value: p.altura ? `${p.altura}cm` : "—", icon: User },
-        { label: "E-mail", value: user?.email || "—", icon: User },
+        { label: "Nome", value: p.nome || "—", field: "nome", type: "text" as const },
+        { label: "Idade", value: p.idade ? `${p.idade} anos` : "—", field: "idade", type: "number" as const, rawValue: p.idade },
+        { label: "Peso atual", value: p.peso_atual ? `${p.peso_atual}kg` : "—", field: "peso_atual", type: "number" as const, rawValue: p.peso_atual },
+        { label: "Altura", value: p.altura ? `${p.altura}cm` : "—", field: "altura", type: "number" as const, rawValue: p.altura },
+        { label: "E-mail", value: user?.email || "—", field: null },
       ],
     },
     {
       titulo: "Objetivo e metas",
       items: [
-        { label: "Objetivo", value: p.objetivo || "—", icon: Target },
-        { label: "Meta", value: p.meta || "—", icon: Target },
-        { label: "Nível de atividade", value: p.nivel_atividade || "—", icon: Target },
+        { label: "Objetivo", value: p.objetivo || "—", field: "objetivo", type: "text" as const },
+        { label: "Meta", value: p.meta || "—", field: "meta", type: "text" as const },
+        { label: "Nível de atividade", value: p.nivel_atividade || "—", field: "nivel_atividade", type: "text" as const },
       ],
     },
     {
       titulo: "Alimentação",
       items: [
-        { label: "Preferências", value: (p.preferencias_alimentares || []).join(", ") || "—", icon: Utensils },
-        { label: "Restrições", value: (p.restricoes || []).join(", ") || "—", icon: Utensils },
+        { label: "Preferências", value: (p.preferencias_alimentares || []).join(", ") || "—", field: "preferencias_alimentares", type: "text" as const },
+        { label: "Restrições", value: (p.restricoes || []).join(", ") || "—", field: "restricoes", type: "text" as const },
       ],
     },
     {
       titulo: "Rotina",
       items: [
-        { label: "Rotina", value: p.rotina || "—", icon: Calendar },
-        { label: "Frequência de treino", value: p.frequencia_treino || "—", icon: Calendar },
-        { label: "Horário de treino", value: p.horario_treino || "—", icon: Calendar },
-        { label: "Consumo de água", value: p.consumo_agua || "—", icon: Calendar },
-        { label: "Média de sono", value: p.media_sono || "—", icon: Calendar },
+        { label: "Rotina", value: p.rotina || "—", field: "rotina", type: "text" as const },
+        { label: "Frequência de treino", value: p.frequencia_treino || "—", field: "frequencia_treino", type: "text" as const },
+        { label: "Horário de treino", value: p.horario_treino || "—", field: "horario_treino", type: "text" as const },
+        { label: "Consumo de água", value: p.consumo_agua || "—", field: "consumo_agua", type: "text" as const },
+        { label: "Média de sono", value: p.media_sono || "—", field: "media_sono", type: "text" as const },
       ],
     },
   ];
@@ -108,6 +180,7 @@ export default function Perfil() {
 
   return (
     <div className="min-h-screen bg-background pb-12">
+      {/* Header */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center gap-3 mb-4">
           <button
@@ -123,6 +196,7 @@ export default function Perfil() {
       </div>
 
       <div className="px-5 space-y-4">
+        {/* Card do usuário */}
         <div className="bg-card card-elevated rounded-2xl p-5 flex items-center gap-4 animate-fade-up">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
             <Heart className="text-primary" size={24} strokeWidth={1.5} />
@@ -134,6 +208,7 @@ export default function Perfil() {
           </div>
         </div>
 
+        {/* Seções editáveis */}
         {sections.map((section, sIdx) => (
           <div
             key={section.titulo}
@@ -149,15 +224,28 @@ export default function Perfil() {
               {section.items.map((item, i) => (
                 <button
                   key={item.label}
+                  disabled={!item.field}
+                  onClick={() => {
+                    if (!item.field) return;
+                    const raw = (item as any).rawValue ?? p[item.field] ?? "";
+                    openEdit(item.label, item.field, raw, (item as any).type ?? "text");
+                  }}
                   className={cn(
-                    "w-full flex items-center justify-between px-4 py-3 text-left hover:bg-secondary/40 transition-colors active:scale-[0.99]",
+                    "w-full flex items-center justify-between px-4 py-3 text-left transition-colors active:scale-[0.99]",
+                    item.field
+                      ? "hover:bg-secondary/40 cursor-pointer"
+                      : "cursor-default opacity-70",
                     i < section.items.length - 1 && "border-b border-border/50"
                   )}
                 >
                   <span className="text-sm text-foreground">{item.label}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground max-w-[180px] truncate">{item.value}</span>
-                    <ChevronRight size={14} className="text-muted-foreground/50" />
+                    <span className="text-sm text-muted-foreground max-w-[180px] truncate">
+                      {item.value}
+                    </span>
+                    {item.field && (
+                      <Pencil size={13} className="text-muted-foreground/50" />
+                    )}
                   </div>
                 </button>
               ))}
@@ -165,6 +253,7 @@ export default function Perfil() {
           </div>
         ))}
 
+        {/* Notificações */}
         <div
           className="bg-card card-elevated rounded-2xl overflow-hidden animate-fade-up"
           style={{ animationDelay: `${(sections.length + 1) * 60}ms` }}
@@ -204,6 +293,7 @@ export default function Perfil() {
           </div>
         </div>
 
+        {/* Logout */}
         <Button
           variant="ghost"
           className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/5 animate-fade-up"
@@ -218,6 +308,49 @@ export default function Perfil() {
           LeveFit v1.0 · Feito com 💛
         </p>
       </div>
+
+      {/* Modal de edição */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil size={16} className="text-primary" />
+              Editar {editingLabel}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-2">
+            <Input
+              type={editingType}
+              value={editingValue}
+              onChange={(e) => setEditingValue(e.target.value)}
+              placeholder={`Digite ${editingLabel.toLowerCase()}...`}
+              className="text-base"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !saving) handleSave();
+              }}
+            />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setModalOpen(false)}
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                "Salvar"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
