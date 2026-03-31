@@ -14,7 +14,7 @@ function Login() {
     setCarregando(true)
     setMensagem('')
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password: senha,
     })
@@ -25,12 +25,29 @@ function Login() {
       return
     }
 
-    setMensagem('Login realizado com sucesso.')
-    setCarregando(false)
+    // ✅ Verifica se o usuário já completou o onboarding
+    const userId = data.user?.id
+    if (userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('user_id', userId)
+        .single()
 
-    setTimeout(() => {
-      navigate('/onboarding')
-    }, 800)
+      setCarregando(false)
+      setMensagem('Login realizado com sucesso.')
+
+      setTimeout(() => {
+        if (profile?.onboarding_completed) {
+          navigate('/dashboard')   // ✅ Já fez onboarding → vai pro dashboard
+        } else {
+          navigate('/onboarding')  // 🆕 Primeira vez → faz onboarding
+        }
+      }, 800)
+    } else {
+      setCarregando(false)
+      setMensagem('Erro ao obter dados do usuário.')
+    }
   }
 
   return (
@@ -72,6 +89,7 @@ function Login() {
             placeholder="Seu e-mail"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && entrar()}
             style={{
               padding: 14,
               borderRadius: 14,
@@ -85,6 +103,7 @@ function Login() {
             placeholder="Sua senha"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && entrar()}
             style={{
               padding: 14,
               borderRadius: 14,
@@ -102,9 +121,10 @@ function Login() {
               padding: 14,
               fontSize: 16,
               fontWeight: 600,
-              background: '#d6a692',
+              background: carregando ? '#e8c4b8' : '#d6a692',
               color: '#ffffff',
-              cursor: 'pointer',
+              cursor: carregando ? 'not-allowed' : 'pointer',
+              transition: 'background 0.2s',
             }}
           >
             {carregando ? 'Entrando...' : 'Entrar'}
@@ -121,6 +141,15 @@ function Login() {
           Ainda não tem conta?{' '}
           <Link to="/cadastro" style={{ color: '#a66f5a', fontWeight: 600 }}>
             Criar conta
+          </Link>
+        </p>
+
+        <p style={{ marginTop: 8 }}>
+          <Link
+            to="/reset-password"
+            style={{ color: '#a66f5a', fontSize: 14 }}
+          >
+            Esqueci minha senha
           </Link>
         </p>
 
