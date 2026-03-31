@@ -13,18 +13,19 @@ function Onboarding() {
   const { user } = useAuth()
   const [nome, setNome] = useState('')
   const [objetivo, setObjetivo] = useState('')
+  const [peso, setPeso] = useState('')
+  const [altura, setAltura] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const finalizarOnboarding = async () => {
     if (!nome.trim() || !objetivo) {
-      setError('Por favor, preencha todos os campos')
+      setError('Por favor, preencha nome e objetivo')
       return
     }
 
     if (!user) {
       setError('Usuário não autenticado')
-      console.error('Usuário não encontrado')
       return
     }
 
@@ -32,7 +33,8 @@ function Onboarding() {
     setError('')
 
     try {
-      console.log('Salvando onboarding para usuário:', user.id)
+      const pesoNum = peso ? parseFloat(peso) : null
+      const alturaNum = altura ? parseFloat(altura) : null
 
       const { error: profileError } = await supabase
         .from('profiles')
@@ -41,23 +43,24 @@ function Onboarding() {
             user_id: user.id,
             nome: nome.trim(),
             objetivo,
+            // ✅ Salva peso_atual E peso_inicial juntos (só na primeira vez)
+            ...(pesoNum && { peso_atual: pesoNum }),
+            ...(pesoNum && { peso_inicial: pesoNum }),
+            ...(alturaNum && { altura: alturaNum }),
             onboarding_completed: true,
           },
           { onConflict: 'user_id' }
         )
 
       if (profileError) {
-        console.error('Erro ao salvar profile:', profileError)
         setError(`Erro ao salvar perfil: ${profileError.message}`)
         setLoading(false)
         return
       }
 
-      console.log('Perfil salvo com sucesso!')
       setLoading(false)
       navigate('/dashboard')
     } catch (err: any) {
-      console.error('Erro geral ao salvar onboarding:', err)
       setError(`Erro: ${err.message || 'Algo deu errado'}`)
       setLoading(false)
     }
@@ -81,6 +84,7 @@ function Onboarding() {
             </div>
           )}
 
+          {/* Nome */}
           <div className="space-y-2">
             <Label htmlFor="nome" className="text-gray-700 font-medium">
               Como você gostaria de ser chamado?
@@ -96,6 +100,7 @@ function Onboarding() {
             />
           </div>
 
+          {/* Objetivo */}
           <div className="space-y-2">
             <Label htmlFor="objetivo" className="text-gray-700 font-medium">
               Qual é seu objetivo?
@@ -110,6 +115,54 @@ function Onboarding() {
                 <SelectItem value="Ganhar massa">Ganhar massa muscular</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Peso */}
+          <div className="space-y-2">
+            <Label htmlFor="peso" className="text-gray-700 font-medium">
+              Qual é seu peso atual? <span className="text-gray-400 font-normal">(opcional)</span>
+            </Label>
+            <div className="relative">
+              <Input
+                id="peso"
+                type="number"
+                placeholder="Ex: 75"
+                value={peso}
+                onChange={(e) => setPeso(e.target.value)}
+                disabled={loading}
+                className="border-gray-300 pr-10"
+                min="30"
+                max="300"
+                step="0.1"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                kg
+              </span>
+            </div>
+          </div>
+
+          {/* Altura */}
+          <div className="space-y-2">
+            <Label htmlFor="altura" className="text-gray-700 font-medium">
+              Qual é sua altura? <span className="text-gray-400 font-normal">(opcional)</span>
+            </Label>
+            <div className="relative">
+              <Input
+                id="altura"
+                type="number"
+                placeholder="Ex: 170"
+                value={altura}
+                onChange={(e) => setAltura(e.target.value)}
+                disabled={loading}
+                className="border-gray-300 pr-10"
+                min="100"
+                max="250"
+                step="1"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                cm
+              </span>
+            </div>
           </div>
 
           <Button
